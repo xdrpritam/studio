@@ -4,7 +4,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CheckCircle2, ShieldCheck, ArrowRight, Loader2, Smartphone } from 'lucide-react';
+import { CheckCircle2, ShieldCheck, ArrowRight, Loader2, Smartphone, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -25,7 +25,11 @@ function PaymentContent() {
   const requestId = searchParams.get('requestId');
 
   const handleVerify = () => {
-    if (transactionId.length < 8) return;
+    // 12-digit UPI transaction ID (UTR) validation
+    if (transactionId.length !== 12 || !/^\d+$/.test(transactionId)) {
+      return;
+    }
+
     setIsValidating(true);
     
     // Simulate payment validation logic
@@ -94,7 +98,7 @@ function PaymentContent() {
                   data-ai-hint="QR code"
                 />
               </div>
-              <p className="text-sm text-muted-foreground">Scan this code using PhonePe App to pay ₹100</p>
+              <p className="text-sm text-muted-foreground">Scan this code using **PhonePe App** to pay ₹100</p>
               <div className="flex items-center gap-2 text-xs font-bold text-secondary">
                 <ShieldCheck className="w-4 h-4" /> Secure Merchant Payment
               </div>
@@ -103,31 +107,39 @@ function PaymentContent() {
             <Card className="glass-morphism border-white/10 p-8 flex flex-col justify-center space-y-6">
               <div className="space-y-2">
                 <h2 className="text-2xl font-bold">Verify Payment</h2>
-                <p className="text-sm text-muted-foreground">Enter the 12-digit UPI Transaction ID from PhonePe after successful payment.</p>
+                <p className="text-sm text-muted-foreground">Enter the **12-digit** UPI Transaction ID (UTR) from PhonePe.</p>
               </div>
               
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-bold">Transaction ID (UTR)</label>
+                  <div className="flex justify-between items-center">
+                    <label className="text-sm font-bold">UTR Number</label>
+                    <span className="text-[10px] text-muted-foreground">{transactionId.length}/12</span>
+                  </div>
                   <Input 
-                    placeholder="Enter UTR Number" 
+                    placeholder="Enter 12 digit UTR" 
                     value={transactionId}
-                    onChange={(e) => setTransactionId(e.target.value)}
-                    className="bg-background/50 border-white/10 h-12 font-mono"
+                    maxLength={12}
+                    onChange={(e) => setTransactionId(e.target.value.replace(/\D/g, ''))}
+                    className={`bg-background/50 border-white/10 h-12 font-mono text-center text-lg tracking-widest ${transactionId.length === 12 ? 'border-primary' : ''}`}
                   />
                 </div>
                 <Button 
                   onClick={handleVerify} 
-                  disabled={isValidating || transactionId.length < 8} 
+                  disabled={isValidating || transactionId.length !== 12} 
                   className="w-full h-12 font-bold neon-glow"
                 >
                   {isValidating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify & Activate"}
                 </Button>
               </div>
 
-              <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 text-xs space-y-2">
-                <p className="font-bold text-primary">Only PhonePe is Supported</p>
-                <p className="text-muted-foreground">Ensure you use the PhonePe app for this transaction to avoid verification delays.</p>
+              <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 text-xs space-y-3">
+                <p className="font-bold text-primary flex items-center gap-2">
+                  <AlertTriangle className="w-3 h-3" /> PhonePe Only
+                </p>
+                <p className="text-muted-foreground leading-relaxed">
+                  Our system currently only supports instant verification for **PhonePe** transactions. Using other apps may result in activation delays.
+                </p>
               </div>
             </Card>
           </div>

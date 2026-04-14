@@ -22,9 +22,9 @@ export default function AdminPage() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
 
-  // Admin Login State
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  // Admin Login State - Updated with requested credentials
+  const [username, setUsername] = useState('pd863253');
+  const [password, setPassword] = useState('sd7gen3');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Check Admin Privileges via Firestore DBAC
@@ -60,8 +60,7 @@ export default function AdminPage() {
 
     setIsLoggingIn(true);
     try {
-      // In this system, admin usernames are mapped to an internal auth format
-      // If the username is an email, use it directly, otherwise append domain
+      // Admin usernames are mapped to an internal auth format
       const email = username.includes('@') ? username : `${username}@unmac.admin`;
       await signInWithEmailAndPassword(auth, email, password);
       toast({ title: "Login Successful", description: "Admin session established." });
@@ -85,7 +84,7 @@ export default function AdminPage() {
     );
   }
 
-  // If not logged in or not an admin, show the custom admin login form
+  // Admin login gateway
   if (!user || !adminData) {
     return (
       <div className="container mx-auto px-4 py-24 flex justify-center">
@@ -96,7 +95,7 @@ export default function AdminPage() {
               <Lock className="w-8 h-8 text-secondary" />
             </div>
             <CardTitle className="text-3xl font-bold font-headline">Admin Portal</CardTitle>
-            <CardDescription>Username & Password Capture Required</CardDescription>
+            <CardDescription>Secure Dashboard Access</CardDescription>
           </CardHeader>
           <form onSubmit={handleAdminLogin}>
             <CardContent className="space-y-4">
@@ -138,7 +137,7 @@ export default function AdminPage() {
                     <AlertCircle className="w-3 h-3" /> UID Not Authorized
                   </p>
                   <p className="text-muted-foreground">Your UID: <code className="text-foreground">{user.uid}</code></p>
-                  <p className="mt-1">Add this ID to 'roles_admin' to grant access.</p>
+                  <p className="mt-1">Add this ID to 'roles_admin' in the Firebase Console to grant access.</p>
                 </div>
               )}
             </CardFooter>
