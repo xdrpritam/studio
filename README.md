@@ -1,4 +1,3 @@
-
 # UnMac | MAC Address Unblocker
 
 This is a Next.js 15 application built with React, ShadCN UI, and Tailwind CSS.
@@ -28,15 +27,18 @@ Access to `/admin` is restricted via Firestore Security Rules. To grant yourself
 
 ## Deployment
 
-### Firebase App Hosting (Recommended)
+### Netlify (Recommended for ease of use)
 
-UnMac is optimized for **Firebase App Hosting**, which provides seamless deployment for Next.js applications with Server-Side Rendering (SSR).
+1.  Push your code to GitHub.
+2.  Connect the repository to Netlify.
+3.  Netlify will automatically detect Next.js and use the included `netlify.toml` configuration.
+4.  Deploy!
 
-1.  Push your code to a GitHub repository.
-2.  Go to the [Firebase Console](https://console.firebase.google.com/).
-3.  Select **App Hosting** from the build menu.
-4.  Click **Get Started** and connect your GitHub repository.
-5.  Follow the prompts to create a backend. Firebase will automatically handle the build and deployment process.
+### Firebase App Hosting (Optimized for SSR)
+
+1.  Go to the [Firebase Console](https://console.firebase.google.com/).
+2.  Select **App Hosting** from the build menu.
+3.  Connect your GitHub repository and follow the prompts.
 
 ## Features
 
@@ -45,4 +47,4 @@ UnMac is optimized for **Firebase App Hosting**, which provides seamless deploym
 - **Trial System:** 15-minute free trial for new users.
 - **Dashboard:** Real-time monitoring of unblock status and session countdown.
 - **Admin Panel:** Comprehensive overview of all user requests and inquiries.
-- **Secure Auth:** Support for Email/Password and Google Login.
+- **Redeem Codes:** Dedicated voucher system for premium access activation.
