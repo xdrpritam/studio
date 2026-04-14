@@ -34,10 +34,6 @@ service cloud.firestore {
     match /{path=**}/payments/{paymentId} {
       allow list: if isAdmin();
     }
-    
-    match /{path=**}/contactInquiries/{inquiryId} {
-      allow list, read, update, delete: if isAdmin();
-    }
 
     // --- Standard Collection Rules ---
 
@@ -63,6 +59,7 @@ service cloud.firestore {
 
     match /contactInquiries/{inquiryId} {
       allow create: if true;
+      allow list, read, update, delete: if isAdmin();
     }
     
     match /roles_admin/{adminId} {
