@@ -1,113 +1,38 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isAdmin() { return isSignedIn() && (request.auth.uid == 'gKJKDmDMZmg8RvUT119XStZ7Xpt1' || exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid))); }
 
-    /**
-     * UNMAC FIREBASE SECURITY RULES
-     *
-     * Core Philosophy:
-     * This ruleset implements a strict path-based ownership model. Security is enforced by 
-     * nesting user-specific data (UnblockRequests, Subscriptions) under the user's primary 
-     * document path. This ensures that authorization is inherently tied to the data structure, 
-     * making rules performant and eliminating the need for expensive cross-document lookups.
-     *
-     * Data Structure:
-     * - /users/{userId}: Private user profile.
-     * - /users/{userId}/unblockRequests/{id}: User-owned MAC unblocking logs.
-     * - /users/{userId}/subscriptions/{id}: User-owned payment and plan status.
-     * - /contactInquiries/{id}: Top-level collection for public support requests.
-     *
-     * Key Security Decisions:
-     * 1. Authorization Independence: We use the {userId} wildcard in the path as the primary 
-     *    source of truth for ownership, directly comparing it against the 'request.auth.uid'.
-     * 2. Relational Integrity: On creation of user-scoped data, we enforce that any internal 
-     *    'userId' field matches the path to prevent data spoofing.
-     * 3. Public Inquiries: 'ContactInquiry' documents can be created by any user (including 
-     *    anonymous/unauthenticated) but can only be managed by administrative roles.
-     * 4. Prototyping Flexibility: While access control is strict, data schema validation 
-     *    is omitted to allow for rapid iteration on field names and types.
-     */
-
-    // --- Helper Functions ---
-
-    /** Checks if the request is from an authenticated user. */
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    /** Checks if the authenticated user's UID matches the provided userId. */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    /** Checks ownership and ensures the document exists for update/delete operations. */
-    function isExistingOwner(userId) {
-      return resource != null && isOwner(userId);
-    }
-
-    /** 
-     * Placeholder for administrative access. 
-     * In a production environment, this should check for a custom 'admin' claim or a dedicated admin collection.
-     */
-    function isAdmin() {
-      return isSignedIn() && request.auth.token.admin == true;
-    }
-
-    // --- Collection Rules ---
-
-    /**
-     * @description Rules for the User profile. Only the owner can read or manage their profile.
-     * @path /users/{userId}
-     * @allow Authenticated user (get) where UID matches path.
-     * @deny Any user (list) attempting to browse the user directory.
-     * @principle Restricts access to a user's own data tree via path-based ownership.
-     */
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
-
-      /**
-       * @description User-owned MAC unblock requests.
-       * @path /users/{userId}/unblockRequests/{unblockRequestId}
-       * @allow Owner (create) if the internal userId field matches the authenticated UID.
-       * @deny Owner (update) if attempting to change the userId field (immutability).
-       * @principle Validates relational integrity between path and document data.
-       */
-      match /unblockRequests/{unblockRequestId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-        allow delete: if isExistingOwner(userId);
+      allow get, list, create, update, delete: if isOwner(userId) || isAdmin();
+      
+      match /unblockRequests/{requestId} {
+        allow get, list, create, update, delete: if isOwner(userId) || isAdmin();
+      }
+      
+      match /payments/{paymentId} {
+        allow get, list, create, update, delete: if isOwner(userId) || isAdmin();
       }
 
-      /**
-       * @description User-owned service subscriptions.
-       * @path /users/{userId}/subscriptions/{subscriptionId}
-       * @allow Owner (get) to view their own subscription status.
-       * @deny Unauthenticated user (create) attempting to inject a subscription.
-       * @principle Enforces path-based ownership for subcollections.
-       */
       match /subscriptions/{subscriptionId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-        allow delete: if isExistingOwner(userId);
+        allow get, list, create, update, delete: if isOwner(userId) || isAdmin();
       }
     }
 
-    /**
-     * @description Top-level collection for contact form submissions.
-     * @path /contactInquiries/{inquiryId}
-     * @allow Any user (create) to submit a contact inquiry.
-     * @deny Any non-admin user (list) attempting to read other users' inquiries.
-     * @principle Structural segregation for data that is publicly created but privately managed.
-     */
+    match /redeemCodes/{codeId} {
+      allow get: if isSignedIn();
+      allow list, create, update, delete: if isAdmin();
+    }
+
     match /contactInquiries/{inquiryId} {
       allow create: if true;
       allow get, list, update, delete: if isAdmin();
+    }
+
+    match /roles_admin/{uid} {
+      allow read: if isSignedIn();
     }
   }
 }
