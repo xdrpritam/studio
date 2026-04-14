@@ -1,10 +1,6 @@
 [build]
   command = "npm run build"
-  publish = ".next"
+  publish = "dist"
 
-[functions]
-  # Increase timeout for Genkit AI operations if needed
-  timeout = 20
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
+[build.environment]
+  NODE_VERSION = "18"
