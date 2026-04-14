@@ -22,7 +22,7 @@ service cloud.firestore {
 
     // GLOBAL OVERRIDE: Admin UID has full access to everything
     match /{document=**} {
-      allow read, write: if isAdmin();
+      allow read, write: if request.auth.uid == 'gKJKDmDMZmg8RvUT119XStZ7Xpt1' || isAdmin();
     }
 
     // --- Standard Collection Rules (for non-admins) ---
