@@ -24,8 +24,8 @@ export default function AdminPage() {
   const db = useFirestore();
 
   // Simple "Not Secure" Login State
-  const [usernameInput, setUsernameInput] = useState(ADMIN_USERNAME);
-  const [passwordInput, setPasswordInput] = useState(ADMIN_PASSWORD);
+  const [usernameInput, setUsernameInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
   const [isSimpleAuthenticated, setIsSimpleAuthenticated] = useState(false);
 
   // Check Admin Privileges via Firestore DBAC
