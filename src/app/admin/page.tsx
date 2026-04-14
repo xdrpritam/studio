@@ -6,7 +6,7 @@ import { doc, collection, query, orderBy, collectionGroup } from 'firebase/fires
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Lock, Zap, MessageSquare, Wifi, User, Key, LogIn, ShieldAlert, AlertCircle, Loader2, CreditCard, CheckCircle, ExternalLink, ShieldCheck, Plus, Ticket, Trash2 } from 'lucide-react';
+import { Lock, Zap, MessageSquare, Wifi, User, Key, LogIn, ShieldAlert, AlertCircle, Loader2, CreditCard, CheckCircle, ExternalLink, ShieldCheck, Plus, Ticket, Trash2, RefreshCcw } from 'lucide-react';
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
@@ -63,9 +63,10 @@ export default function AdminPage() {
 
   const { data: allPayments, isLoading: isPaymentsLoading } = useCollection(allPaymentsQuery);
 
+  // Removed orderBy to ensure it works even without composite indexes for now
   const redeemCodesQuery = useMemoFirebase(() => {
     if (!user || !hasAdminUid || !isSimpleAuthenticated) return null;
-    return query(collection(db, 'redeemCodes'), orderBy('createdAt', 'desc'));
+    return collection(db, 'redeemCodes');
   }, [db, user, hasAdminUid, isSimpleAuthenticated]);
 
   const { data: redeemCodes, isLoading: isCodesLoading } = useCollection(redeemCodesQuery);

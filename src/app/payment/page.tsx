@@ -47,7 +47,7 @@ function PaymentContent() {
     setDocumentNonBlocking(paymentRef, {
       id: paymentId,
       userId: user.uid,
-      requestId: requestId, // Link the request for admin verification
+      requestId: requestId,
       subscriptionId: 'SUB_PREMIUM_MONTHLY',
       amount: method === 'UPI' ? 100 : 0,
       currency: 'INR',
@@ -110,7 +110,8 @@ function PaymentContent() {
   };
 
   const handleRedeem = async () => {
-    if (!redeemCode || redeemCode.length < 5) {
+    const codeToRedeem = redeemCode.toUpperCase().trim();
+    if (!codeToRedeem || codeToRedeem.length < 3) {
       toast({
         variant: "destructive",
         title: "Invalid Code",
@@ -121,7 +122,7 @@ function PaymentContent() {
 
     setIsValidating(true);
     try {
-      const codeRef = doc(db, 'redeemCodes', redeemCode.toUpperCase());
+      const codeRef = doc(db, 'redeemCodes', codeToRedeem);
       const codeSnap = await getDoc(codeRef);
 
       if (codeSnap.exists()) {
@@ -139,7 +140,7 @@ function PaymentContent() {
             updateDocumentNonBlocking(codeRef, { isUsed: true });
           }
           
-          savePaymentRecord('VOUCHER', redeemCode.toUpperCase(), true);
+          savePaymentRecord('VOUCHER', codeToRedeem, true);
           toast({
             title: "Code Redeemed!",
             description: "Voucher applied successfully. Access granted.",
@@ -210,21 +211,9 @@ function PaymentContent() {
                         <Copy className="w-4 h-4" />
                       </Button>
                     </div>
-                    <div className="flex items-center justify-center gap-6 opacity-30 grayscale hover:grayscale-0 hover:opacity-100 transition-all cursor-default py-2">
-                       <span className="font-black italic text-lg tracking-tighter">BHIM</span>
-                       <span className="font-black italic text-lg tracking-tighter">UPI</span>
-                       <span className="font-black italic text-lg tracking-tighter">GPAY</span>
-                    </div>
                   </div>
                 </CardContent>
               </Card>
-
-              <div className="flex items-center gap-3 p-4 rounded-2xl bg-secondary/5 border border-secondary/10">
-                <Info className="w-5 h-5 text-secondary shrink-0" />
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Plan Details: <span className="text-white font-bold">Premium Unblock (30 Days)</span>. Activation requires manual UTR verification by our team.
-                </p>
-              </div>
             </div>
 
             <div className="lg:col-span-7 space-y-8">
@@ -247,17 +236,14 @@ function PaymentContent() {
                 </TabsList>
 
                 <TabsContent value="upi" className="mt-6">
-                  <Card className="glass-morphism border-white/10 p-8 relative overflow-hidden group">
-                    <div className="space-y-8 relative z-10">
+                  <Card className="glass-morphism border-white/10 p-8">
+                    <div className="space-y-8">
                       <div className="space-y-4">
                         <div className="flex justify-between items-end">
                           <div className="space-y-1">
                             <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary">Transaction Reference (UTR)</label>
                             <p className="text-xs text-muted-foreground">Enter the 12-digit number from your app</p>
                           </div>
-                          <span className="text-[10px] font-bold text-muted-foreground bg-white/5 px-3 py-1 rounded-full border border-white/10">
-                            {transactionId.length} / 12 DIGITS
-                          </span>
                         </div>
                         <div className="relative">
                           <CreditCard className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-primary/50" />
@@ -266,7 +252,7 @@ function PaymentContent() {
                             value={transactionId}
                             maxLength={12}
                             onChange={(e) => setTransactionId(e.target.value.replace(/\D/g, ''))}
-                            className="bg-black/40 border-white/10 h-20 pl-16 font-mono text-center text-3xl tracking-[0.3em] focus:border-primary focus:ring-1 focus:ring-primary transition-all rounded-2xl shadow-inner"
+                            className="bg-black/40 border-white/10 h-20 pl-16 font-mono text-center text-3xl tracking-[0.3em] focus:border-primary focus:ring-1 focus:ring-primary transition-all rounded-2xl"
                           />
                         </div>
                       </div>
@@ -274,25 +260,17 @@ function PaymentContent() {
                       <Button 
                         onClick={handleVerify} 
                         disabled={isValidating || transactionId.length !== 12} 
-                        className="w-full h-20 text-xl font-black rounded-2xl neon-glow uppercase tracking-[0.2em] group"
+                        className="w-full h-20 text-xl font-black rounded-2xl neon-glow uppercase tracking-[0.2em]"
                       >
-                        {isValidating ? (
-                          <div className="flex items-center gap-3">
-                            <Loader2 className="w-6 h-6 animate-spin" /> SUBMITTING...
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-3">
-                            SUBMIT FOR REVIEW <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
-                          </div>
-                        )}
+                        {isValidating ? <Loader2 className="w-6 h-6 animate-spin" /> : "SUBMIT FOR REVIEW"}
                       </Button>
                     </div>
                   </Card>
                 </TabsContent>
 
                 <TabsContent value="redeem" className="mt-6">
-                  <Card className="glass-morphism border-white/10 p-8 relative overflow-hidden group">
-                    <div className="space-y-8 relative z-10">
+                  <Card className="glass-morphism border-white/10 p-8">
+                    <div className="space-y-8">
                       <div className="space-y-4">
                         <div className="space-y-1">
                           <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-secondary">Voucher Code</label>
@@ -304,7 +282,7 @@ function PaymentContent() {
                             placeholder="UNMAC-XXXX-XXXX" 
                             value={redeemCode}
                             onChange={(e) => setRedeemCode(e.target.value)}
-                            className="bg-black/40 border-white/10 h-20 pl-16 font-mono text-center text-2xl tracking-[0.1em] focus:border-secondary focus:ring-1 focus:ring-secondary transition-all rounded-2xl shadow-inner"
+                            className="bg-black/40 border-white/10 h-20 pl-16 font-mono text-center text-2xl tracking-[0.1em] focus:border-secondary focus:ring-1 focus:ring-secondary transition-all rounded-2xl"
                           />
                         </div>
                       </div>
@@ -312,49 +290,22 @@ function PaymentContent() {
                       <Button 
                         onClick={handleRedeem} 
                         disabled={isValidating || !redeemCode} 
-                        className="w-full h-20 text-xl font-black rounded-2xl bg-secondary text-black hover:bg-secondary/90 uppercase tracking-[0.2em] group"
+                        className="w-full h-20 text-xl font-black rounded-2xl bg-secondary text-black hover:bg-secondary/90 uppercase tracking-[0.2em]"
                       >
-                        {isValidating ? (
-                          <div className="flex items-center gap-3">
-                            <Loader2 className="w-6 h-6 animate-spin" /> ACTIVATING...
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-3">
-                            ACTIVATE INSTANTLY <Zap className="w-6 h-6 group-hover:scale-125 transition-transform" />
-                          </div>
-                        )}
+                        {isValidating ? <Loader2 className="w-6 h-6 animate-spin" /> : "ACTIVATE INSTANTLY"}
                       </Button>
                     </div>
                   </Card>
                 </TabsContent>
               </Tabs>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-                {[
-                  { icon: ShieldCheck, title: "Secure Tunnel", desc: "Your MAC is isolated and protected during the activation process." },
-                  { icon: Zap, title: "Admin Review", desc: "UTR payments are manually reviewed for maximum network safety." },
-                ].map((item, i) => (
-                  <div key={i} className="p-5 rounded-2xl glass-card border-white/5 flex gap-4 items-start">
-                    <item.icon className="w-6 h-6 text-secondary shrink-0" />
-                    <div className="space-y-1">
-                      <h4 className="text-xs font-bold text-white uppercase">{item.title}</h4>
-                      <p className="text-[10px] text-muted-foreground leading-relaxed">{item.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         ) : (
           <div className="flex justify-center items-center py-20">
-            <Card className="glass-morphism border-primary/30 text-center py-20 px-12 animate-in zoom-in duration-700 max-w-xl w-full relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-2 bg-primary" />
+            <Card className="glass-morphism border-primary/30 text-center py-20 px-12 max-w-xl w-full">
               <CardContent className="space-y-10">
-                <div className="relative inline-block">
-                  <div className="absolute inset-0 bg-primary/30 rounded-full blur-[60px]" />
-                  <div className="w-32 h-32 rounded-full bg-primary flex items-center justify-center relative neon-glow mx-auto">
-                    <CheckCircle2 className="w-16 h-16 text-white" />
-                  </div>
+                <div className="w-32 h-32 rounded-full bg-primary flex items-center justify-center mx-auto neon-glow">
+                  <CheckCircle2 className="w-16 h-16 text-white" />
                 </div>
                 <div className="space-y-4">
                   <h1 className="text-5xl lg:text-7xl font-black font-headline tracking-tighter uppercase italic leading-none">
@@ -363,7 +314,7 @@ function PaymentContent() {
                   <p className="text-lg text-muted-foreground font-medium uppercase tracking-widest">Premium Service is Now Live</p>
                 </div>
                 <Link href="/dashboard" className="block pt-6">
-                  <Button size="lg" className="w-full h-20 neon-glow rounded-2xl font-black text-2xl uppercase tracking-[0.3em] transition-transform hover:scale-105">
+                  <Button size="lg" className="w-full h-20 neon-glow rounded-2xl font-black text-2xl uppercase tracking-[0.3em]">
                     DASHBOARD <ArrowRight className="ml-3 w-8 h-8" />
                   </Button>
                 </Link>
@@ -381,7 +332,6 @@ export default function PaymentPage() {
     <Suspense fallback={
       <div className="container mx-auto px-4 py-32 flex flex-col items-center justify-center min-h-screen">
         <Loader2 className="w-16 h-16 animate-spin text-primary opacity-50" />
-        <p className="mt-4 text-xs font-bold text-muted-foreground uppercase tracking-[0.4em]">Initializing Payment Tunnel...</p>
       </div>
     }>
       <PaymentContent />
