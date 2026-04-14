@@ -1,6 +1,7 @@
 
 "use client";
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Shield, LayoutDashboard, HelpCircle, PhoneCall, Info, LogOut, User, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,12 @@ export function Navbar() {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
   const db = useFirestore();
+  const [mounted, setMounted] = useState(false);
+
+  // Set mounted to true after the component has mounted on the client
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const adminRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -19,7 +26,9 @@ export function Navbar() {
   }, [user, db]);
 
   const { data: adminData } = useDoc(adminRef);
-  const isAdmin = !!adminData;
+  
+  // Only calculate isAdmin and show dynamic auth UI after hydration
+  const isAdmin = mounted ? !!adminData : false;
 
   return (
     <nav className="sticky top-0 z-50 border-b border-white/10 bg-background/80 backdrop-blur-md">
@@ -50,7 +59,7 @@ export function Navbar() {
         </div>
 
         <div className="flex items-center gap-3">
-          {!isUserLoading && user ? (
+          {mounted && !isUserLoading && user ? (
             <>
               <Link href="/dashboard">
                 <Button variant="ghost" size="sm" className="flex items-center gap-2">
@@ -61,7 +70,7 @@ export function Navbar() {
                 <LogOut className="w-4 h-4" />
               </Button>
             </>
-          ) : (
+          ) : mounted && !isUserLoading ? (
             <>
               <Link href="/login">
                 <Button variant="ghost" size="sm">Login</Button>
@@ -72,6 +81,9 @@ export function Navbar() {
                 </Button>
               </Link>
             </>
+          ) : (
+            // Placeholder during loading/mounting to prevent layout shift
+            <div className="w-24 h-8" />
           )}
         </div>
       </div>
