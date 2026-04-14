@@ -1,0 +1,387 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user account in the UnMac application, storing profile information and roles. Assumes an external authentication system for passwords.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's unique email address, used for communication and login (via external authentication).",
+          "format": "email"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The first name of the user."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name of the user."
+        },
+        "role": {
+          "type": "string",
+          "description": "The role assigned to the user within the system (e.g., 'user', 'admin')."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the user account was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the user account information was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "role",
+        "createdAt"
+      ]
+    },
+    "Subscription": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Subscription",
+      "type": "object",
+      "description": "Manages a user's subscription plan, including free trials and paid memberships, determining service access duration.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Subscription entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User associated with this subscription. (Relationship: User 1:N Subscription)"
+        },
+        "planType": {
+          "type": "string",
+          "description": "The type of plan (e.g., 'FreeTrial', 'PaidMonthly')."
+        },
+        "startDate": {
+          "type": "string",
+          "description": "The date and time when the subscription became active.",
+          "format": "date-time"
+        },
+        "endDate": {
+          "type": "string",
+          "description": "The date and time when the subscription is set to expire.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the subscription (e.g., 'Active', 'Expired', 'Canceled')."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the subscription record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp when the subscription record was last updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "planType",
+        "startDate",
+        "endDate",
+        "status",
+        "createdAt"
+      ]
+    },
+    "UnblockRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UnblockRequest",
+      "type": "object",
+      "description": "Stores details for a user's request to unblock a specific MAC address on a chosen WiFi network.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UnblockRequest entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who made this unblock request. (Relationship: User 1:N UnblockRequest)"
+        },
+        "subscriptionId": {
+          "type": "string",
+          "description": "Reference to the Subscription under which this unblock request was made. (Relationship: Subscription 1:N UnblockRequest)"
+        },
+        "macAddress": {
+          "type": "string",
+          "description": "The MAC address requested to be unblocked (e.g., '00:1A:2B:3C:4D:5E')."
+        },
+        "deviceName": {
+          "type": "string",
+          "description": "The name of the device associated with the MAC address (e.g., 'My Laptop')."
+        },
+        "wifiProvider": {
+          "type": "string",
+          "description": "The WiFi service provider (e.g., 'Jio', 'Airtel', 'BSNL')."
+        },
+        "wifiName": {
+          "type": "string",
+          "description": "The SSID (name) of the WiFi network (e.g., 'HomeWiFi')."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the unblock request (e.g., 'Processing', 'Unblocked', 'Failed', 'Expired')."
+        },
+        "requestDate": {
+          "type": "string",
+          "description": "Timestamp when the unblock request was submitted.",
+          "format": "date-time"
+        },
+        "unblockedAt": {
+          "type": "string",
+          "description": "Optional timestamp when the MAC address was successfully unblocked.",
+          "format": "date-time"
+        },
+        "expirationDate": {
+          "type": "string",
+          "description": "The date and time when the unblock service for this request is set to expire, based on the user's plan.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "subscriptionId",
+        "macAddress",
+        "wifiProvider",
+        "wifiName",
+        "status",
+        "requestDate",
+        "expirationDate"
+      ]
+    },
+    "Payment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Payment",
+      "type": "object",
+      "description": "Records details of payment transactions made by users, primarily for subscription plans, including UPI specifics.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Payment entity."
+        },
+        "subscriptionId": {
+          "type": "string",
+          "description": "Reference to the Subscription this payment is for. (Relationship: Subscription 1:N Payment)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who made this payment. (Relationship: User 1:N Payment)"
+        },
+        "amount": {
+          "type": "number",
+          "description": "The monetary amount of the payment."
+        },
+        "currency": {
+          "type": "string",
+          "description": "The currency of the payment (e.g., 'INR')."
+        },
+        "paymentDate": {
+          "type": "string",
+          "description": "The date and time the payment was made.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the payment (e.g., 'Pending', 'Completed', 'Failed', 'Refunded')."
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "The method used for payment (e.g., 'UPI')."
+        },
+        "transactionId": {
+          "type": "string",
+          "description": "The unique transaction ID provided by the payment system, required for UPI validation."
+        },
+        "upiApp": {
+          "type": "string",
+          "description": "The UPI application used for payment (e.g., 'PhonePe')."
+        },
+        "providerReferenceId": {
+          "type": "string",
+          "description": "An optional reference ID from the payment gateway provider for external tracking."
+        }
+      },
+      "required": [
+        "id",
+        "subscriptionId",
+        "userId",
+        "amount",
+        "currency",
+        "paymentDate",
+        "status",
+        "paymentMethod",
+        "transactionId",
+        "upiApp"
+      ]
+    },
+    "ContactInquiry": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ContactInquiry",
+      "type": "object",
+      "description": "Stores messages submitted by users through the website's contact form, facilitating communication and support.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ContactInquiry entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the person submitting the inquiry."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address for responding to the inquiry.",
+          "format": "email"
+        },
+        "subject": {
+          "type": "string",
+          "description": "The subject line of the inquiry message."
+        },
+        "message": {
+          "type": "string",
+          "description": "The full content of the inquiry message."
+        },
+        "submissionDate": {
+          "type": "string",
+          "description": "Timestamp when the inquiry was submitted.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The processing status of the inquiry (e.g., 'New', 'InProgress', 'Resolved')."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "email",
+        "subject",
+        "message",
+        "submissionDate",
+        "status"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores individual user profiles. Access is restricted to the user themselves for their own profile (read/update) or to administrators (read/write all). The `userId` matches `request.auth.uid` for self-access."
+        }
+      },
+      {
+        "path": "/roles_admin/{adminId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "A top-level collection used for database-backed access control (DBAC). The existence of a document where `adminId` matches `request.auth.uid` signifies administrative privileges. Used for checking admin roles in security rules (e.g., `exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid))`)."
+        }
+      },
+      {
+        "path": "/users/{userId}/subscriptions/{subscriptionId}",
+        "definition": {
+          "entityName": "Subscription",
+          "schema": {
+            "$ref": "#/backend/entities/Subscription"
+          },
+          "description": "Stores subscription details for each user. `userId` is denormalized into the path for authorization independence, allowing direct `request.auth.uid == userId` checks for access to a user's subscriptions. Supports QAPs by enabling secure `list` operations for a specific user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who owns this subscription. Matches the parent `users` collection ID."
+            },
+            {
+              "name": "subscriptionId",
+              "description": "The unique identifier for a specific subscription document."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/unblockRequests/{unblockRequestId}",
+        "definition": {
+          "entityName": "UnblockRequest",
+          "schema": {
+            "$ref": "#/backend/entities/UnblockRequest"
+          },
+          "description": "Stores unblock requests made by a user. `userId` is denormalized into the path for authorization independence, allowing direct `request.auth.uid == userId` checks. This supports QAPs by enabling secure `list` operations for a user's requests.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who made this unblock request. Matches the parent `users` collection ID."
+            },
+            {
+              "name": "unblockRequestId",
+              "description": "The unique identifier for a specific unblock request document."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/payments/{paymentId}",
+        "definition": {
+          "entityName": "Payment",
+          "schema": {
+            "$ref": "#/backend/entities/Payment"
+          },
+          "description": "Stores payment transaction records for each user, including UPI specifics. `userId` is denormalized into the path for authorization independence, allowing direct `request.auth.uid == userId` checks. This supports QAPs by enabling secure `list` operations for a user's payments.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user who made this payment. Matches the parent `users` collection ID."
+            },
+            {
+              "name": "paymentId",
+              "description": "The unique identifier for a specific payment transaction document."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/contactInquiries/{inquiryId}",
+        "definition": {
+          "entityName": "ContactInquiry",
+          "schema": {
+            "$ref": "#/backend/entities/ContactInquiry"
+          },
+          "description": "A top-level collection for contact inquiries submitted by users (potentially anonymous). Any user can create a document, but only administrators have read, update, and delete access. This segregation supports different access patterns for public submissions versus private user data.",
+          "params": [
+            {
+              "name": "inquiryId",
+              "description": "The unique identifier for a specific contact inquiry document."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to be secure, scalable, and debuggable, adhering strictly to the core design principles. It prioritizes **Authorization Independence** by denormalizing ownership information directly into the document paths. For all user-specific data, the `userId` is included as a path segment (e.g., `/users/{userId}/subscriptions/{subscriptionId}`). This eliminates the need for `get()` calls in security rules to check parent document ownership, simplifying rules and enabling atomic operations. For example, a user's subscription can be created without first retrieving their `User` document to verify ownership.\n\n**Structural Segregation** is implemented by keeping data with different security postures in distinct collections. For instance, user profiles, their subscriptions, unblock requests, and payments are nested under `/users/{userId}/` paths, ensuring that a user's personal data is logically and securely separated. Publicly submitted `ContactInquiry` data, which requires different access rules (anonymous create, admin read/write), resides in a top-level collection (`/contactInquiries/{inquiryId}`). Admin roles are managed via a dedicated top-level `roles_admin` collection, leveraging the **DBAC (No Custom Claims)** principle and 'Existence over Content' for authorization.\n\n**QAPs (Rules are not Filters)** are robustly supported. For user-owned collections like `subscriptions`, `unblockRequests`, and `payments`, `list` operations are inherently secure because the path wildcards (`{userId}`) can be directly compared against `request.auth.uid` in security rules, ensuring users can only list their own data. For admin functionalities, the existence check against `/roles_admin/$(request.auth.uid)` grants broader `list` access across all relevant collections. This structure ensures that security rules primarily grant or deny access based on the request, rather than relying on the rules to filter results, which is less efficient and prone to errors. The explicit `status` fields in entities like `Subscription`, `UnblockRequest`, and `Payment` ensure clear state modeling, further enhancing rule clarity and data integrity. The `Payment` entity includes `transactionId` and `upiApp` fields to support UPI payment validation, specifically for PhonePe as requested."
+  }
+}
