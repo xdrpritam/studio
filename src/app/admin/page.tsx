@@ -80,7 +80,7 @@ export default function AdminPage() {
               <Lock className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold font-headline">Admin Console</h1>
+              <h1 className="text-3xl font-bold font-headline text-white">Admin Console</h1>
               <p className="text-muted-foreground">Logged in as <span className="text-primary font-bold">{user.email}</span></p>
             </div>
           </div>
@@ -97,7 +97,7 @@ export default function AdminPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-4xl font-bold font-headline">{allRequests?.length || 0}</p>
+              <p className="text-4xl font-bold font-headline text-white">{allRequests?.length || 0}</p>
             </CardContent>
           </Card>
           <Card className="glass-card">
@@ -107,7 +107,7 @@ export default function AdminPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-4xl font-bold font-headline">{inquiries?.length || 0}</p>
+              <p className="text-4xl font-bold font-headline text-white">{inquiries?.length || 0}</p>
             </CardContent>
           </Card>
           <Card className="glass-card">
@@ -131,13 +131,13 @@ export default function AdminPage() {
           <TabsContent value="requests">
             <Card className="glass-card overflow-hidden">
               <CardHeader>
-                <CardTitle>Global MAC Requests</CardTitle>
+                <CardTitle className="text-white">Global MAC Requests</CardTitle>
                 <CardDescription>All user-submitted unblocking tasks.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-white/5">
+                    <TableRow className="border-white/5 hover:bg-transparent">
                       <TableHead>Date</TableHead>
                       <TableHead>MAC Address</TableHead>
                       <TableHead>Device</TableHead>
@@ -159,8 +159,8 @@ export default function AdminPage() {
                             {new Date(req.requestDate).toLocaleDateString()}
                           </TableCell>
                           <TableCell className="font-mono text-xs font-bold text-secondary">{req.macAddress}</TableCell>
-                          <TableCell className="font-medium">{req.deviceName}</TableCell>
-                          <TableCell>{req.wifiProvider}</TableCell>
+                          <TableCell className="font-medium text-white">{req.deviceName}</TableCell>
+                          <TableCell className="text-white">{req.wifiProvider}</TableCell>
                           <TableCell>
                             <Badge variant={req.status === 'Unblocked' ? 'default' : 'secondary'} className={req.status === 'Unblocked' ? 'bg-primary' : 'bg-muted'}>
                               {req.status}
@@ -184,13 +184,13 @@ export default function AdminPage() {
           <TabsContent value="inquiries">
             <Card className="glass-card overflow-hidden">
               <CardHeader>
-                <CardTitle>Contact Inquiries</CardTitle>
+                <CardTitle className="text-white">Contact Inquiries</CardTitle>
                 <CardDescription>Messages from the public.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-white/5">
+                    <TableRow className="border-white/5 hover:bg-transparent">
                       <TableHead>Date</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
@@ -208,9 +208,9 @@ export default function AdminPage() {
                       inquiries.map((inquiry) => (
                         <TableRow key={inquiry.id} className="border-white/5 hover:bg-white/5">
                           <TableCell className="text-xs text-muted-foreground">{new Date(inquiry.submissionDate).toLocaleDateString()}</TableCell>
-                          <TableCell className="font-bold">{inquiry.name}</TableCell>
+                          <TableCell className="font-bold text-white">{inquiry.name}</TableCell>
                           <TableCell className="text-primary">{inquiry.email}</TableCell>
-                          <TableCell>{inquiry.subject}</TableCell>
+                          <TableCell className="text-white">{inquiry.subject}</TableCell>
                         </TableRow>
                       ))
                     ) : (
@@ -239,7 +239,7 @@ export default function AdminPage() {
             <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
               {(!user || !hasAdminUid) ? <ShieldAlert className="w-8 h-8 text-destructive" /> : <Lock className="w-8 h-8 text-primary" />}
             </div>
-            <CardTitle className="text-3xl font-bold font-headline">
+            <CardTitle className="text-3xl font-bold font-headline text-white">
               {(!user || !hasAdminUid) ? "Access Denied" : "Admin Login"}
             </CardTitle>
             <CardDescription>
@@ -274,7 +274,7 @@ export default function AdminPage() {
             <form onSubmit={handleSimpleLogin}>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
+                  <Label htmlFor="username" className="text-white">Username</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input 
@@ -282,12 +282,12 @@ export default function AdminPage() {
                       value={usernameInput}
                       onChange={(e) => setUsernameInput(e.target.value)}
                       placeholder="Admin username"
-                      className="pl-10 bg-background/50 border-white/10 h-12"
+                      className="pl-10 bg-background/50 border-white/10 h-12 text-white"
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-white">Password</Label>
                   <div className="relative">
                     <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input 
@@ -296,7 +296,7 @@ export default function AdminPage() {
                       value={passwordInput}
                       onChange={(e) => setPasswordInput(e.target.value)}
                       placeholder="••••••••"
-                      className="pl-10 bg-background/50 border-white/10 h-12"
+                      className="pl-10 bg-background/50 border-white/10 h-12 text-white"
                     />
                   </div>
                 </div>
