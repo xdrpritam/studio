@@ -7,7 +7,7 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Lock, Users, MessageSquare, AlertCircle, Loader2, Wifi, Zap, Clock, User, LogIn, Key } from 'lucide-react';
+import { Lock, Users, MessageSquare, AlertCircle, Loader2, Wifi, Zap, Clock, User, LogIn, Key, HelpCircle, Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,7 +22,7 @@ export default function AdminPage() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
 
-  // Admin Login State - Updated with requested credentials
+  // Admin Login State
   const [username, setUsername] = useState('pd863253');
   const [password, setPassword] = useState('sd7gen3');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -65,11 +65,17 @@ export default function AdminPage() {
       await signInWithEmailAndPassword(auth, email, password);
       toast({ title: "Login Successful", description: "Admin session established." });
     } catch (error: any) {
-      console.error(error);
+      // Handle the error gracefully without triggering a global crash
+      let errorMessage = "Invalid admin credentials.";
+      
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
+        errorMessage = "Admin user not found. Please create the user in the Firebase Console.";
+      }
+
       toast({ 
         variant: "destructive", 
         title: "Access Denied", 
-        description: "Invalid admin credentials. Ensure your account is in 'roles_admin'." 
+        description: errorMessage 
       });
     } finally {
       setIsLoggingIn(false);
@@ -88,61 +94,83 @@ export default function AdminPage() {
   if (!user || !adminData) {
     return (
       <div className="container mx-auto px-4 py-24 flex justify-center">
-        <Card className="w-full max-w-md glass-morphism border-white/10 overflow-hidden">
-          <div className="h-1.5 w-full bg-secondary animate-pulse" />
-          <CardHeader className="text-center space-y-2">
-            <div className="mx-auto w-16 h-16 rounded-2xl bg-secondary/10 flex items-center justify-center mb-4">
-              <Lock className="w-8 h-8 text-secondary" />
-            </div>
-            <CardTitle className="text-3xl font-bold font-headline">Admin Portal</CardTitle>
-            <CardDescription>Secure Dashboard Access</CardDescription>
-          </CardHeader>
-          <form onSubmit={handleAdminLogin}>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="username">Admin Username</Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input 
-                    id="username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Enter admin username"
-                    className="pl-10 bg-background/50 border-white/10 h-12"
-                  />
-                </div>
+        <div className="w-full max-w-md space-y-6">
+          <Card className="glass-morphism border-white/10 overflow-hidden">
+            <div className="h-1.5 w-full bg-secondary animate-pulse" />
+            <CardHeader className="text-center space-y-2">
+              <div className="mx-auto w-16 h-16 rounded-2xl bg-secondary/10 flex items-center justify-center mb-4">
+                <Lock className="w-8 h-8 text-secondary" />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Access Password</Label>
-                <div className="relative">
-                  <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input 
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="pl-10 bg-background/50 border-white/10 h-12"
-                  />
+              <CardTitle className="text-3xl font-bold font-headline">Admin Portal</CardTitle>
+              <CardDescription>Secure Dashboard Access</CardDescription>
+            </CardHeader>
+            <form onSubmit={handleAdminLogin}>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="username">Admin Username</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      id="username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="Enter admin username"
+                      className="pl-10 bg-background/50 border-white/10 h-12"
+                    />
+                  </div>
                 </div>
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Access Password</Label>
+                  <div className="relative">
+                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input 
+                      id="password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="pl-10 bg-background/50 border-white/10 h-12"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="flex flex-col gap-4">
+                <Button type="submit" disabled={isLoggingIn} className="w-full h-14 text-lg font-bold bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-[0_0_20px_rgba(14,165,233,0.3)]">
+                  {isLoggingIn ? <Loader2 className="w-5 h-5 animate-spin" /> : <><LogIn className="mr-2 w-5 h-5" /> Login to Console</>}
+                </Button>
+                
+                {user && !adminData && (
+                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-xs space-y-2">
+                    <p className="font-bold text-destructive flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> Step 1: Authorize your UID
+                    </p>
+                    <p className="text-muted-foreground">Your Session UID: <code className="text-foreground font-bold">{user.uid}</code></p>
+                    <p className="text-[10px] leading-tight opacity-70">
+                      Go to Firebase Console &gt; Firestore &gt; create collection <code className="text-foreground">roles_admin</code> &gt; add document with ID as your UID.
+                    </p>
+                  </div>
+                )}
+              </CardFooter>
+            </form>
+          </Card>
+
+          <Card className="bg-primary/5 border-primary/20">
+            <CardHeader className="py-4">
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <HelpCircle className="w-4 h-4 text-primary" /> Setup Instructions
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-[11px] space-y-2 text-muted-foreground leading-relaxed">
+              <p>To use the specialized credentials above:</p>
+              <ol className="list-decimal pl-4 space-y-1">
+                <li>Open Firebase Console &gt; Authentication.</li>
+                <li>Add user: <code className="text-primary">pd863253@unmac.admin</code></li>
+                <li>Set password: <code className="text-primary">sd7gen3</code></li>
+                <li>Copy the new User's UID and add it to the <code className="text-foreground">roles_admin</code> Firestore collection.</li>
+              </ol>
             </CardContent>
-            <CardFooter className="flex flex-col gap-4">
-              <Button type="submit" disabled={isLoggingIn} className="w-full h-14 text-lg font-bold bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-[0_0_20px_rgba(14,165,233,0.3)]">
-                {isLoggingIn ? <Loader2 className="w-5 h-5 animate-spin" /> : <><LogIn className="mr-2 w-5 h-5" /> Login to Console</>}
-              </Button>
-              {!adminData && user && (
-                <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-xs text-center">
-                  <p className="font-bold text-destructive flex items-center justify-center gap-1 mb-1">
-                    <AlertCircle className="w-3 h-3" /> UID Not Authorized
-                  </p>
-                  <p className="text-muted-foreground">Your UID: <code className="text-foreground">{user.uid}</code></p>
-                  <p className="mt-1">Add this ID to 'roles_admin' in the Firebase Console to grant access.</p>
-                </div>
-              )}
-            </CardFooter>
-          </form>
-        </Card>
+          </Card>
+        </div>
       </div>
     );
   }
