@@ -1,14 +1,13 @@
+
 "use client";
 
 import { useUser, useDoc, useFirestore, useCollection, useMemoFirebase, useAuth } from '@/firebase';
 import { doc, collection, query, orderBy, collectionGroup } from 'firebase/firestore';
-import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Lock, Users, MessageSquare, AlertCircle, Loader2, Wifi, Zap, Clock, User, LogIn, Key, HelpCircle, ShieldAlert } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,16 +15,18 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 
 const HARDCODED_ADMIN_UID = 'UkGf3zzd3NdY0XzDhMyV1JbUi0X2';
+const ADMIN_USERNAME = 'pd863253';
+const ADMIN_PASSWORD = 'sd7gen3';
 
 export default function AdminPage() {
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
 
-  // Admin Login State
-  const [username, setUsername] = useState('pd863253');
-  const [password, setPassword] = useState('sd7gen3');
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  // Simple Login State
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSimpleAuthenticated, setIsSimpleAuthenticated] = useState(false);
 
   // Check Admin Privileges via Firestore DBAC
   const adminRef = useMemoFirebase(() => {
@@ -35,49 +36,36 @@ export default function AdminPage() {
 
   const { data: adminData, isLoading: isAdminLoading } = useDoc(adminRef);
 
-  // Determine effective admin status
-  const hasAdminAccess = !!adminData || (user?.uid === HARDCODED_ADMIN_UID);
+  // Determine effective admin status based on UID
+  const hasAdminUid = !!adminData || (user?.uid === HARDCODED_ADMIN_UID);
 
   // Fetch Inquiries - Guarded by admin check
   const inquiriesQuery = useMemoFirebase(() => {
-    if (!user || !hasAdminAccess) return null;
+    if (!user || !hasAdminUid || !isSimpleAuthenticated) return null;
     return query(collection(db, 'contactInquiries'), orderBy('submissionDate', 'desc'));
-  }, [db, user, hasAdminAccess]);
+  }, [db, user, hasAdminUid, isSimpleAuthenticated]);
 
   const { data: inquiries, isLoading: isInquiriesLoading } = useCollection(inquiriesQuery);
 
   // Fetch All Unblock Requests using Collection Group - Guarded by admin check
   const allRequestsQuery = useMemoFirebase(() => {
-    if (!user || !hasAdminAccess) return null;
+    if (!user || !hasAdminUid || !isSimpleAuthenticated) return null;
     return query(collectionGroup(db, 'unblockRequests'), orderBy('requestDate', 'desc'));
-  }, [db, user, hasAdminAccess]);
+  }, [db, user, hasAdminUid, isSimpleAuthenticated]);
 
   const { data: allRequests, isLoading: isRequestsLoading } = useCollection(allRequestsQuery);
 
-  const handleAdminLogin = async (e: React.FormEvent) => {
+  const handleSimpleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username || !password) {
-      toast({ variant: "destructive", title: "Required", description: "Username and password are required." });
-      return;
-    }
-
-    setIsLoggingIn(true);
-    try {
-      const email = username.includes('@') ? username : `${username}@unmac.admin`;
-      await signInWithEmailAndPassword(auth, email, password);
-      toast({ title: "Login Successful", description: "Admin session established." });
-    } catch (error: any) {
-      let errorMessage = "Invalid admin credentials.";
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
-        errorMessage = "Admin user not found. Please create the user in the Firebase Console.";
-      }
+    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+      setIsSimpleAuthenticated(true);
+      toast({ title: "Login Successful", description: "Dashboard unlocked." });
+    } else {
       toast({ 
         variant: "destructive", 
         title: "Access Denied", 
-        description: errorMessage 
+        description: "Invalid credentials." 
       });
-    } finally {
-      setIsLoggingIn(false);
     }
   };
 
@@ -89,8 +77,8 @@ export default function AdminPage() {
     );
   }
 
-  // Dashboard View (Authorized)
-  if (user && hasAdminAccess) {
+  // Dashboard View (Authorized + Simple Logged In)
+  if (isSimpleAuthenticated && user && hasAdminUid) {
     return (
       <div className="container mx-auto px-4 py-16 space-y-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -103,8 +91,8 @@ export default function AdminPage() {
               <p className="text-muted-foreground">Authenticated as <span className="text-secondary font-bold">{user.email}</span></p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={() => auth.signOut()} className="border-white/10">
-            Sign Out of Console
+          <Button variant="outline" size="sm" onClick={() => setIsSimpleAuthenticated(false)} className="border-white/10">
+            Lock Console
           </Button>
         </div>
 
@@ -270,38 +258,47 @@ export default function AdminPage() {
           <div className="h-1.5 w-full bg-secondary animate-pulse" />
           <CardHeader className="text-center space-y-2">
             <div className="mx-auto w-16 h-16 rounded-2xl bg-secondary/10 flex items-center justify-center mb-4">
-              {user ? <ShieldAlert className="w-8 h-8 text-destructive" /> : <Lock className="w-8 h-8 text-secondary" />}
+              {(!user || !hasAdminUid) ? <ShieldAlert className="w-8 h-8 text-destructive" /> : <Lock className="w-8 h-8 text-secondary" />}
             </div>
             <CardTitle className="text-3xl font-bold font-headline">
-              {user ? "Access Denied" : "Admin Portal"}
+              {(!user || !hasAdminUid) ? "Access Restricted" : "Admin Portal"}
             </CardTitle>
             <CardDescription>
-              {user ? "You are logged in but unauthorized." : "Secure Dashboard Access"}
+              {(!user || !hasAdminUid) ? "Firebase authorization required" : "Secure Dashboard Access"}
             </CardDescription>
           </CardHeader>
           
-          {user ? (
+          {(!user || !hasAdminUid) ? (
             <CardContent className="space-y-6">
               <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl space-y-3">
                 <p className="text-xs font-bold text-destructive uppercase tracking-widest flex items-center gap-2">
-                  <AlertCircle className="w-3 h-3" /> Authorization Required
+                  <AlertCircle className="w-3 h-3" /> UID Authorization Needed
                 </p>
                 <div className="space-y-1">
-                  <p className="text-[10px] text-muted-foreground uppercase">Your Session UID</p>
+                  <p className="text-[10px] text-muted-foreground uppercase">Your Current UID</p>
                   <code className="block p-2 bg-black/30 rounded text-xs break-all border border-white/5 font-mono select-all">
-                    {user.uid}
+                    {user?.uid || "NOT_LOGGED_IN"}
                   </code>
                 </div>
+                {!user && (
+                  <p className="text-xs text-primary font-bold">Please login to the app first using Google or Email.</p>
+                )}
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  To access this panel, your UID must exist in the <code className="text-foreground">roles_admin</code> Firestore collection.
+                  Your UID must be authorized in the <code className="text-foreground">roles_admin</code> collection for data access.
                 </p>
               </div>
-              <Button variant="ghost" className="w-full" onClick={() => auth.signOut()}>
-                Sign Out to Switch Account
-              </Button>
+              {!user ? (
+                <Link href="/login" className="block w-full">
+                  <Button className="w-full h-12">Login to App</Button>
+                </Link>
+              ) : (
+                <Button variant="ghost" className="w-full" onClick={() => auth.signOut()}>
+                  Sign Out to Switch Account
+                </Button>
+              )}
             </CardContent>
           ) : (
-            <form onSubmit={handleAdminLogin}>
+            <form onSubmit={handleSimpleLogin}>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="username">Admin Username</Label>
@@ -311,7 +308,7 @@ export default function AdminPage() {
                       id="username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Enter admin username"
+                      placeholder="Enter username"
                       className="pl-10 bg-background/50 border-white/10 h-12"
                     />
                   </div>
@@ -332,8 +329,8 @@ export default function AdminPage() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button type="submit" disabled={isLoggingIn} className="w-full h-14 text-lg font-bold bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-[0_0_20px_rgba(14,165,233,0.3)]">
-                  {isLoggingIn ? <Loader2 className="w-5 h-5 animate-spin" /> : <><LogIn className="mr-2 w-5 h-5" /> Login to Console</>}
+                <Button type="submit" className="w-full h-14 text-lg font-bold bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-[0_0_20px_rgba(14,165,233,0.3)]">
+                  <LogIn className="mr-2 w-5 h-5" /> Unlock Dashboard
                 </Button>
               </CardFooter>
             </form>
@@ -343,15 +340,13 @@ export default function AdminPage() {
         <Card className="bg-primary/5 border-primary/20">
           <CardHeader className="py-4">
             <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <HelpCircle className="w-4 h-4 text-primary" /> Setup Instructions
+              <HelpCircle className="w-4 h-4 text-primary" /> Login Info
             </CardTitle>
           </CardHeader>
           <CardContent className="text-[11px] space-y-3 text-muted-foreground leading-relaxed">
-            <p>1. Copy your <strong>UID</strong> shown above (if logged in).</p>
-            <p>2. Open <strong>Firebase Console</strong> &gt; <strong>Firestore</strong>.</p>
-            <p>3. Create collection <code className="text-foreground">roles_admin</code>.</p>
-            <p>4. Add a document with <strong>ID</strong> = your UID.</p>
-            <p>5. If using specific credentials (<code className="text-foreground">pd863253</code>), ensure that user is created in <strong>Authentication</strong> and authorized in Firestore.</p>
+            <p>1. Ensure you are logged into the app with the authorized UID.</p>
+            <p>2. Simple Login: <strong>pd863253</strong> / <strong>sd7gen3</strong>.</p>
+            <p>3. This bypasses the need for a separate admin auth account.</p>
           </CardContent>
         </Card>
       </div>
