@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Lock, Zap, MessageSquare, Wifi, User, Key, LogIn, ShieldAlert, AlertCircle, Loader2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,8 +24,8 @@ export default function AdminPage() {
   const db = useFirestore();
 
   // Simple "Not Secure" Login State
-  const [username, setUsername] = useState(ADMIN_USERNAME);
-  const [password, setPassword] = useState(ADMIN_PASSWORD);
+  const [usernameInput, setUsernameInput] = useState(ADMIN_USERNAME);
+  const [passwordInput, setPasswordInput] = useState(ADMIN_PASSWORD);
   const [isSimpleAuthenticated, setIsSimpleAuthenticated] = useState(false);
 
   // Check Admin Privileges via Firestore DBAC
@@ -57,7 +57,7 @@ export default function AdminPage() {
 
   const handleSimpleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+    if (usernameInput === ADMIN_USERNAME && passwordInput === ADMIN_PASSWORD) {
       setIsSimpleAuthenticated(true);
       toast({ title: "Access Granted", description: "Admin dashboard unlocked." });
     } else {
@@ -285,8 +285,8 @@ export default function AdminPage() {
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input 
                       id="username"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
+                      value={usernameInput}
+                      onChange={(e) => setUsernameInput(e.target.value)}
                       placeholder="Username"
                       className="pl-10 bg-background/50 border-white/10 h-12"
                     />
@@ -299,8 +299,8 @@ export default function AdminPage() {
                     <Input 
                       id="password"
                       type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      value={passwordInput}
+                      onChange={(e) => setPasswordInput(e.target.value)}
                       placeholder="••••••••"
                       className="pl-10 bg-background/50 border-white/10 h-12"
                     />
