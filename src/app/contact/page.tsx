@@ -8,22 +8,64 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
+import { useFirestore } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
+const contactSchema = z.object({
+  name: z.string().min(2, { message: "Name is required" }),
+  email: z.string().email({ message: "Invalid email address" }),
+  subject: z.string().min(5, { message: "Subject must be at least 5 characters" }),
+  message: z.string().min(10, { message: "Message must be at least 10 characters" }),
+});
+
+type ContactFormValues = z.infer<typeof contactSchema>;
 
 export default function ContactPage() {
+  const db = useFirestore();
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const form = useForm<ContactFormValues>({
+    resolver: zodResolver(contactSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      subject: '',
+      message: '',
+    },
+  });
+
+  const onSubmit = (values: ContactFormValues) => {
     setLoading(true);
-    setTimeout(() => {
+    
+    const inquiryRef = collection(db, 'contactInquiries');
+    
+    addDocumentNonBlocking(inquiryRef, {
+      ...values,
+      submissionDate: new Date().toISOString(),
+      status: 'New',
+    })
+    .then(() => {
       setLoading(false);
       setSent(true);
       toast({
         title: "Message Sent",
         description: "We'll get back to you within 24 hours.",
       });
-    }, 2000);
+    })
+    .catch((error) => {
+      setLoading(false);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+      });
+    });
   };
 
   return (
@@ -82,29 +124,67 @@ export default function ContactPage() {
             </Card>
           ) : (
             <Card className="glass-morphism border-white/10 p-8">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-muted-foreground px-1">Full Name</label>
-                    <Input placeholder="John Doe" className="bg-background/50 border-white/10 h-12" required />
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Full Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="John Doe" {...field} className="bg-background/50 border-white/10 h-12" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email Address</FormLabel>
+                          <FormControl>
+                            <Input placeholder="john@example.com" {...field} className="bg-background/50 border-white/10 h-12" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-muted-foreground px-1">Email Address</label>
-                    <Input type="email" placeholder="john@example.com" className="bg-background/50 border-white/10 h-12" required />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-muted-foreground px-1">Subject</label>
-                  <Input placeholder="Issue with Jio Fiber unblocking" className="bg-background/50 border-white/10 h-12" required />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-muted-foreground px-1">Message</label>
-                  <Textarea placeholder="Please describe your issue in detail..." className="bg-background/50 border-white/10 min-h-[150px] resize-none" required />
-                </div>
-                <Button type="submit" disabled={loading} className="w-full h-14 text-lg font-bold neon-glow rounded-xl">
-                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="mr-2 w-5 h-5" /> Send Message</>}
-                </Button>
-              </form>
+                  <FormField
+                    control={form.control}
+                    name="subject"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Subject</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Issue with Jio Fiber unblocking" {...field} className="bg-background/50 border-white/10 h-12" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="message"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Message</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Please describe your issue in detail..." {...field} className="bg-background/50 border-white/10 min-h-[150px] resize-none" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" disabled={loading} className="w-full h-14 text-lg font-bold neon-glow rounded-xl">
+                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="mr-2 w-5 h-5" /> Send Message</>}
+                  </Button>
+                </form>
+              </Form>
             </Card>
           )}
         </div>

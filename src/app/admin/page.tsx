@@ -2,19 +2,21 @@
 "use client";
 
 import { useUser, useDoc, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, orderBy } from 'firebase/firestore';
+import { doc, collection, query, orderBy, collectionGroup } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Lock, Users, MessageSquare, AlertCircle, Loader2 } from 'lucide-react';
+import { Lock, Users, MessageSquare, AlertCircle, Loader2, Wifi, Zap, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function AdminPage() {
   const router = useRouter();
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
 
+  // Check Admin Privileges
   const adminRef = useMemoFirebase(() => {
     if (!user) return null;
     return doc(db, 'roles_admin', user.uid);
@@ -22,11 +24,19 @@ export default function AdminPage() {
 
   const { data: adminData, isLoading: isAdminLoading } = useDoc(adminRef);
 
+  // Fetch Inquiries
   const inquiriesQuery = useMemoFirebase(() => {
     return query(collection(db, 'contactInquiries'), orderBy('submissionDate', 'desc'));
   }, [db]);
 
   const { data: inquiries, isLoading: isInquiriesLoading } = useCollection(inquiriesQuery);
+
+  // Fetch All Unblock Requests using Collection Group
+  const allRequestsQuery = useMemoFirebase(() => {
+    return query(collectionGroup(db, 'unblockRequests'), orderBy('requestDate', 'desc'));
+  }, [db]);
+
+  const { data: allRequests, isLoading: isRequestsLoading } = useCollection(allRequestsQuery);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -68,83 +78,152 @@ export default function AdminPage() {
         <Card className="glass-morphism border-white/10">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
-              <Users className="w-4 h-4" /> Total Users
+              <Zap className="w-4 h-4" /> Unblock Requests
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-4xl font-bold">--</p>
+            <p className="text-4xl font-bold">{allRequests?.length || 0}</p>
           </CardContent>
         </Card>
         <Card className="glass-morphism border-white/10">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
-              <AlertCircle className="w-4 h-4" /> Active Requests
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold">--</p>
-          </CardContent>
-        </Card>
-        <Card className="glass-morphism border-white/10">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
-              <MessageSquare className="w-4 h-4" /> New Inquiries
+              <MessageSquare className="w-4 h-4" /> Support Inquiries
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-bold">{inquiries?.length || 0}</p>
           </CardContent>
         </Card>
+        <Card className="glass-morphism border-white/10">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
+              <Wifi className="w-4 h-4" /> Active Nodes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-4xl font-bold">3</p>
+          </CardContent>
+        </Card>
       </div>
 
-      <Card className="glass-morphism border-white/10">
-        <CardHeader>
-          <CardTitle>Recent Support Inquiries</CardTitle>
-          <CardDescription>Messages submitted through the contact form.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Subject</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isInquiriesLoading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
-                    <Loader2 className="w-4 h-4 animate-spin mx-auto" />
-                  </TableCell>
-                </TableRow>
-              ) : inquiries && inquiries.length > 0 ? (
-                inquiries.map((inquiry) => (
-                  <TableRow key={inquiry.id}>
-                    <TableCell className="text-xs">{new Date(inquiry.submissionDate).toLocaleDateString()}</TableCell>
-                    <TableCell className="font-bold">{inquiry.name}</TableCell>
-                    <TableCell>{inquiry.email}</TableCell>
-                    <TableCell>{inquiry.subject}</TableCell>
-                    <TableCell>
-                      <Badge variant={inquiry.status === 'New' ? 'default' : 'secondary'}>
-                        {inquiry.status}
-                      </Badge>
-                    </TableCell>
+      <Tabs defaultValue="requests" className="w-full">
+        <TabsList className="bg-white/5 border border-white/10 mb-6">
+          <TabsTrigger value="requests" className="data-[state=active]:bg-primary">MAC Requests</TabsTrigger>
+          <TabsTrigger value="inquiries" className="data-[state=active]:bg-primary">Inquiries</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="requests">
+          <Card className="glass-morphism border-white/10">
+            <CardHeader>
+              <CardTitle>Global MAC Unblock Requests</CardTitle>
+              <CardDescription>Real-time list of all user-submitted MAC unblocking tasks.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>MAC Address</TableHead>
+                    <TableHead>Device</TableHead>
+                    <TableHead>Provider</TableHead>
+                    <TableHead>Plan</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    No inquiries found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {isRequestsLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8">
+                        <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                      </TableCell>
+                    </TableRow>
+                  ) : allRequests && allRequests.length > 0 ? (
+                    allRequests.map((req) => (
+                      <TableRow key={req.id}>
+                        <TableCell className="text-xs">
+                          {new Date(req.requestDate).toLocaleDateString()} <br />
+                          <span className="text-muted-foreground">{new Date(req.requestDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs font-bold">{req.macAddress}</TableCell>
+                        <TableCell className="font-medium">{req.deviceName}</TableCell>
+                        <TableCell>{req.wifiProvider}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">
+                            {req.subscriptionId === 'FREE_TRIAL' ? 'Trial' : 'Premium'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={req.status === 'Unblocked' ? 'default' : 'secondary'} className={req.status === 'Processing' ? 'animate-pulse' : ''}>
+                            {req.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        No requests found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="inquiries">
+          <Card className="glass-morphism border-white/10">
+            <CardHeader>
+              <CardTitle>Recent Support Inquiries</CardTitle>
+              <CardDescription>Messages submitted through the contact form.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Subject</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isInquiriesLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8">
+                        <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                      </TableCell>
+                    </TableRow>
+                  ) : inquiries && inquiries.length > 0 ? (
+                    inquiries.map((inquiry) => (
+                      <TableRow key={inquiry.id}>
+                        <TableCell className="text-xs">{new Date(inquiry.submissionDate).toLocaleDateString()}</TableCell>
+                        <TableCell className="font-bold">{inquiry.name}</TableCell>
+                        <TableCell>{inquiry.email}</TableCell>
+                        <TableCell>{inquiry.subject}</TableCell>
+                        <TableCell>
+                          <Badge variant={inquiry.status === 'New' ? 'default' : 'secondary'}>
+                            {inquiry.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        No inquiries found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
