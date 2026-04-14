@@ -3,12 +3,11 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * UNMAC SECURITY RULES - PROTOTYPING MODE
+     * UNMAC SECURITY RULES
      * 
      * Core Philosophy:
-     * This ruleset implements a strict User-Ownership and Role-Based Access Control (RBAC) model. 
-     * It prioritizes Authorization Independence by nesting user-specific data under a /users/{userId} path,
-     * allowing for performant and secure checks without cross-document lookups.
+     * Strict User-Ownership for standard data, with full override for Admins.
+     * Supports Collection Group queries for administrative oversight.
      * 
      * Hardcoded Admin: UkGf3zzd3NdY0XzDhMyV1JbUi0X2
      */
@@ -35,12 +34,17 @@ service cloud.firestore {
       return resource != null && isOwner(userId);
     }
 
-    // Used for admin operations on existing documents
     function isExistingAdmin() {
       return resource != null && isAdmin();
     }
 
-    // --- Collection Rules ---
+    // --- Collection Group Rules (Required for Admin Dashboard) ---
+    
+    match /{path=**}/unblockRequests/{unblockRequestId} {
+      allow read: if isAdmin();
+    }
+
+    // --- Standard Collection Rules ---
 
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
@@ -57,18 +61,14 @@ service cloud.firestore {
       match /unblockRequests/{unblockRequestId} {
         allow get, list: if isOwner(userId) || isAdmin();
         allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isExistingAdmin();
-        allow delete: if isExistingAdmin();
+        allow update, delete: if isAdmin();
       }
 
       match /payments/{paymentId} {
         allow get, list: if isOwner(userId) || isAdmin();
         allow create: if isOwner(userId) 
-                      && request.resource.data.userId == userId 
-                      && request.resource.data.upiApp == 'PhonePe'
-                      && request.resource.data.transactionId != null;
-        allow update: if isExistingAdmin();
-        allow delete: if isExistingAdmin();
+                      && request.resource.data.userId == userId;
+        allow update, delete: if isAdmin();
       }
     }
 
