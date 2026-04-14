@@ -47,9 +47,7 @@ export default function UnblockPage() {
   });
 
   const formatMacAddress = (value: string) => {
-    // Remove all non-hex characters and limit to 12 chars
     const hexOnly = value.replace(/[^0-9A-Fa-f]/g, '').slice(0, 12);
-    // Group by 2s and join with colons
     const groups = hexOnly.match(/.{1,2}/g);
     return groups ? groups.join(':').toUpperCase() : hexOnly.toUpperCase();
   };
@@ -67,12 +65,15 @@ export default function UnblockPage() {
 
     setLoading(true);
     
-    const requestId = Math.random().toString(36).substr(2, 9);
+    const requestId = `REQ_${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
     const requestRef = doc(db, 'users', user.uid, 'unblockRequests', requestId);
 
     const expiresAt = values.plan === 'trial' 
       ? new Date(Date.now() + 15 * 60000).toISOString() 
       : new Date(Date.now() + 30 * 24 * 60 * 60000).toISOString();
+
+    // Trials are activated immediately in the DB, Paid ones wait for payment confirmation
+    const initialStatus = values.plan === 'trial' ? 'Unblocked' : 'Processing';
 
     setDocumentNonBlocking(requestRef, {
       id: requestId,
@@ -82,7 +83,7 @@ export default function UnblockPage() {
       deviceName: values.deviceName,
       wifiProvider: values.wifiProvider,
       wifiName: values.ssid,
-      status: 'Processing',
+      status: initialStatus,
       requestDate: new Date().toISOString(),
       expirationDate: expiresAt,
     }, { merge: true });
@@ -90,7 +91,7 @@ export default function UnblockPage() {
     setTimeout(() => {
       setLoading(false);
       if (values.plan === 'paid') {
-        router.push('/payment');
+        router.push(`/payment?requestId=${requestId}`);
       } else {
         toast({
           title: "Trial Activated!",
@@ -132,7 +133,6 @@ export default function UnblockPage() {
               </Button>
             </Link>
           </div>
-          <p className="text-xs text-muted-foreground">Joining UnMac takes less than 60 seconds.</p>
         </Card>
       </div>
     );
@@ -172,7 +172,7 @@ export default function UnblockPage() {
                                 className="bg-background/50 border-white/10 font-mono" 
                               />
                             </FormControl>
-                            <FormDescription className="text-xs">Physical address of your device (Auto-formatted).</FormDescription>
+                            <FormDescription className="text-xs">Physical address of your device.</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -304,21 +304,6 @@ export default function UnblockPage() {
                   <Shield className="w-5 h-5 text-primary shrink-0" />
                   <p>Our backend validates your MAC address format and verifies the connection with the selected provider.</p>
                 </div>
-                <div className="flex gap-3">
-                  <Wifi className="w-5 h-5 text-secondary shrink-0" />
-                  <p>Disclaimer: This service works only with supported networks: Jio, Airtel, and BSNL.</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-primary/5 border-primary/20">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-primary" /> Trial Policy
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm text-muted-foreground">
-                <p>The free trial provides 15 minutes of unblocked access for a single device. After the trial expires, you must upgrade to a premium plan to continue using the service.</p>
               </CardContent>
             </Card>
           </div>

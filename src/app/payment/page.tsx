@@ -1,25 +1,28 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { CheckCircle2, ShieldCheck, ArrowRight, Loader2, Smartphone, QrCode } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { CheckCircle2, ShieldCheck, ArrowRight, Loader2, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useUser, useFirestore } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { doc } from 'firebase/firestore';
+import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import Image from 'next/image';
 
-export default function PaymentPage() {
+function PaymentContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useUser();
   const db = useFirestore();
   const [step, setStep] = useState<'paying' | 'success'>('paying');
   const [transactionId, setTransactionId] = useState('');
   const [isValidating, setIsValidating] = useState(false);
+
+  const requestId = searchParams.get('requestId');
 
   const handleVerify = () => {
     if (transactionId.length < 8) return;
@@ -31,6 +34,7 @@ export default function PaymentPage() {
         const paymentId = `PAY_${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
         const paymentRef = doc(db, 'users', user.uid, 'payments', paymentId);
         
+        // Save payment record
         setDocumentNonBlocking(paymentRef, {
           id: paymentId,
           userId: user.uid,
@@ -44,7 +48,7 @@ export default function PaymentPage() {
           upiApp: 'PhonePe',
         }, { merge: true });
 
-        // Update user subscription (Simplified for MVP)
+        // Update user subscription
         const subRef = doc(db, 'users', user.uid, 'subscriptions', 'active_subscription');
         setDocumentNonBlocking(subRef, {
           id: 'active_subscription',
@@ -56,6 +60,15 @@ export default function PaymentPage() {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         }, { merge: true });
+
+        // Update the original request status to "Unblocked"
+        if (requestId) {
+          const requestRef = doc(db, 'users', user.uid, 'unblockRequests', requestId);
+          updateDocumentNonBlocking(requestRef, {
+            status: 'Unblocked',
+            unblockedAt: new Date().toISOString()
+          });
+        }
       }
 
       setIsValidating(false);
@@ -158,5 +171,13 @@ export default function PaymentPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function PaymentPage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto px-4 py-32 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>}>
+      <PaymentContent />
+    </Suspense>
   );
 }
