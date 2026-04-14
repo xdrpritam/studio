@@ -14,9 +14,9 @@
     },
     {
       "id": "payment-qr",
-      "description": "UPI QR Code placeholder for secure payments",
-      "imageUrl": "https://picsum.photos/seed/secure-qr/400/400",
-      "imageHint": "QR code"
+      "description": "Paytm UPI QR Code for secure payments",
+      "imageUrl": "https://picsum.photos/seed/paytm-qr/400/400",
+      "imageHint": "Paytm QR"
     }
   ]
 }
