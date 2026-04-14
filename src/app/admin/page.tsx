@@ -6,15 +6,18 @@ import { doc, collection, query, orderBy, collectionGroup } from 'firebase/fires
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Lock, Users, MessageSquare, AlertCircle, Loader2, Wifi, Zap, Clock } from 'lucide-react';
+import { Lock, Users, MessageSquare, AlertCircle, Loader2, Wifi, Zap, Clock, Copy, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from '@/components/ui/button';
+import { toast } from '@/hooks/use-toast';
 
 export default function AdminPage() {
   const router = useRouter();
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
+  const [copied, setCopied] = useState(false);
 
   // Check Admin Privileges
   const adminRef = useMemoFirebase(() => {
@@ -44,6 +47,18 @@ export default function AdminPage() {
     }
   }, [user, isUserLoading, router]);
 
+  const copyUid = () => {
+    if (user?.uid) {
+      navigator.clipboard.writeText(user.uid);
+      setCopied(true);
+      toast({
+        title: "UID Copied",
+        description: "Add this ID to the 'roles_admin' collection in Firebase Console.",
+      });
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   if (isUserLoading || isAdminLoading) {
     return (
       <div className="container mx-auto px-4 py-32 flex justify-center">
@@ -54,10 +69,28 @@ export default function AdminPage() {
 
   if (!adminData) {
     return (
-      <div className="container mx-auto px-4 py-32 text-center space-y-4">
-        <AlertCircle className="w-16 h-16 text-destructive mx-auto" />
-        <h1 className="text-2xl font-bold">Access Denied</h1>
-        <p className="text-muted-foreground">You do not have administrative privileges to view this page.</p>
+      <div className="container mx-auto px-4 py-32 text-center space-y-6">
+        <div className="max-w-md mx-auto glass-morphism p-8 rounded-2xl border-destructive/20 space-y-6">
+          <AlertCircle className="w-16 h-16 text-destructive mx-auto" />
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold">Access Denied</h1>
+            <p className="text-muted-foreground">You do not have administrative privileges. To access this panel, add your UID to the <code className="text-primary">roles_admin</code> collection in the Firebase Console.</p>
+          </div>
+          
+          <div className="p-4 bg-black/40 rounded-xl border border-white/10 flex items-center justify-between gap-4">
+            <div className="text-left overflow-hidden">
+              <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Your User ID (UID)</p>
+              <p className="text-xs font-mono truncate">{user?.uid}</p>
+            </div>
+            <Button size="icon" variant="ghost" onClick={copyUid} className="shrink-0">
+              {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+            </Button>
+          </div>
+          
+          <p className="text-xs text-muted-foreground italic">
+            Note: Creating the 'roles_admin' collection and adding your UID as a document ID bypasses security rules for prototyping.
+          </p>
+        </div>
       </div>
     );
   }
