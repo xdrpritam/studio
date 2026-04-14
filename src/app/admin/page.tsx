@@ -7,9 +7,9 @@ import { signInWithEmailAndPassword } from 'firebase/auth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Lock, Users, MessageSquare, AlertCircle, Loader2, Wifi, Zap, Clock, User, LogIn, Key, HelpCircle, Info } from 'lucide-react';
+import { Lock, Users, MessageSquare, AlertCircle, Loader2, Wifi, Zap, Clock, User, LogIn, Key, HelpCircle, ShieldAlert } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,6 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 
 export default function AdminPage() {
-  const router = useRouter();
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
@@ -60,18 +59,14 @@ export default function AdminPage() {
 
     setIsLoggingIn(true);
     try {
-      // Admin usernames are mapped to an internal auth format
       const email = username.includes('@') ? username : `${username}@unmac.admin`;
       await signInWithEmailAndPassword(auth, email, password);
       toast({ title: "Login Successful", description: "Admin session established." });
     } catch (error: any) {
-      // Handle the error gracefully without triggering a global crash
       let errorMessage = "Invalid admin credentials.";
-      
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
         errorMessage = "Admin user not found. Please create the user in the Firebase Console.";
       }
-
       toast({ 
         variant: "destructive", 
         title: "Access Denied", 
@@ -82,7 +77,7 @@ export default function AdminPage() {
     }
   };
 
-  if (isUserLoading || isAdminLoading) {
+  if (isUserLoading || (user && isAdminLoading)) {
     return (
       <div className="container mx-auto px-4 py-32 flex justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -90,20 +85,218 @@ export default function AdminPage() {
     );
   }
 
-  // Admin login gateway
-  if (!user || !adminData) {
+  // Dashboard View (Authorized)
+  if (user && adminData) {
     return (
-      <div className="container mx-auto px-4 py-24 flex justify-center">
-        <div className="w-full max-w-md space-y-6">
-          <Card className="glass-morphism border-white/10 overflow-hidden">
-            <div className="h-1.5 w-full bg-secondary animate-pulse" />
-            <CardHeader className="text-center space-y-2">
-              <div className="mx-auto w-16 h-16 rounded-2xl bg-secondary/10 flex items-center justify-center mb-4">
-                <Lock className="w-8 h-8 text-secondary" />
-              </div>
-              <CardTitle className="text-3xl font-bold font-headline">Admin Portal</CardTitle>
-              <CardDescription>Secure Dashboard Access</CardDescription>
+      <div className="container mx-auto px-4 py-16 space-y-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center">
+              <Lock className="w-6 h-6 text-secondary" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold font-headline">Admin Control Panel</h1>
+              <p className="text-muted-foreground">Authenticated as <span className="text-secondary font-bold">{user.email}</span></p>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => auth.signOut()} className="border-white/10">
+            Sign Out of Console
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="glass-morphism border-white/10">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
+                <Zap className="w-4 h-4" /> Unblock Requests
+              </CardTitle>
             </CardHeader>
+            <CardContent>
+              <p className="text-4xl font-bold">{allRequests?.length || 0}</p>
+            </CardContent>
+          </Card>
+          <Card className="glass-morphism border-white/10">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" /> Support Inquiries
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-4xl font-bold">{inquiries?.length || 0}</p>
+            </CardContent>
+          </Card>
+          <Card className="glass-morphism border-white/10">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
+                <Wifi className="w-4 h-4" /> Active Nodes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-4xl font-bold">3</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Tabs defaultValue="requests" className="w-full">
+          <TabsList className="bg-white/5 border border-white/10 mb-6">
+            <TabsTrigger value="requests" className="data-[state=active]:bg-secondary">MAC Requests</TabsTrigger>
+            <TabsTrigger value="inquiries" className="data-[state=active]:bg-secondary">Inquiries</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="requests">
+            <Card className="glass-morphism border-white/10">
+              <CardHeader>
+                <CardTitle>Global MAC Unblock Requests</CardTitle>
+                <CardDescription>Real-time list of all user-submitted MAC unblocking tasks.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>MAC Address</TableHead>
+                      <TableHead>Device</TableHead>
+                      <TableHead>Provider</TableHead>
+                      <TableHead>Plan</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isRequestsLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8">
+                          <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                        </TableCell>
+                      </TableRow>
+                    ) : allRequests && allRequests.length > 0 ? (
+                      allRequests.map((req) => (
+                        <TableRow key={req.id}>
+                          <TableCell className="text-xs">
+                            {new Date(req.requestDate).toLocaleDateString()} <br />
+                            <span className="text-muted-foreground">{new Date(req.requestDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs font-bold">{req.macAddress}</TableCell>
+                          <TableCell className="font-medium">{req.deviceName}</TableCell>
+                          <TableCell>{req.wifiProvider}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize">
+                              {req.subscriptionId === 'FREE_TRIAL' ? 'Trial' : 'Premium'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={req.status === 'Unblocked' ? 'default' : 'secondary'} className={req.status === 'Processing' ? 'animate-pulse' : ''}>
+                              {req.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          No requests found.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="inquiries">
+            <Card className="glass-morphism border-white/10">
+              <CardHeader>
+                <CardTitle>Recent Support Inquiries</CardTitle>
+                <CardDescription>Messages submitted through the contact form.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Subject</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isInquiriesLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8">
+                          <Loader2 className="w-4 h-4 animate-spin mx-auto" />
+                        </TableCell>
+                      </TableRow>
+                    ) : inquiries && inquiries.length > 0 ? (
+                      inquiries.map((inquiry) => (
+                        <TableRow key={inquiry.id}>
+                          <TableCell className="text-xs">{new Date(inquiry.submissionDate).toLocaleDateString()}</TableCell>
+                          <TableCell className="font-bold">{inquiry.name}</TableCell>
+                          <TableCell>{inquiry.email}</TableCell>
+                          <TableCell>{inquiry.subject}</TableCell>
+                          <TableCell>
+                            <Badge variant={inquiry.status === 'New' ? 'default' : 'secondary'}>
+                              {inquiry.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          No inquiries found.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    );
+  }
+
+  // Login Gateway (Unauthenticated or Unauthorized)
+  return (
+    <div className="container mx-auto px-4 py-24 flex justify-center">
+      <div className="w-full max-w-md space-y-6">
+        <Card className="glass-morphism border-white/10 overflow-hidden">
+          <div className="h-1.5 w-full bg-secondary animate-pulse" />
+          <CardHeader className="text-center space-y-2">
+            <div className="mx-auto w-16 h-16 rounded-2xl bg-secondary/10 flex items-center justify-center mb-4">
+              {user ? <ShieldAlert className="w-8 h-8 text-destructive" /> : <Lock className="w-8 h-8 text-secondary" />}
+            </div>
+            <CardTitle className="text-3xl font-bold font-headline">
+              {user ? "Access Denied" : "Admin Portal"}
+            </CardTitle>
+            <CardDescription>
+              {user ? "You are logged in but unauthorized." : "Secure Dashboard Access"}
+            </CardDescription>
+          </CardHeader>
+          
+          {user ? (
+            <CardContent className="space-y-6">
+              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl space-y-3">
+                <p className="text-xs font-bold text-destructive uppercase tracking-widest flex items-center gap-2">
+                  <AlertCircle className="w-3 h-3" /> Authorization Required
+                </p>
+                <div className="space-y-1">
+                  <p className="text-[10px] text-muted-foreground uppercase">Your Session UID</p>
+                  <code className="block p-2 bg-black/30 rounded text-xs break-all border border-white/5 font-mono select-all">
+                    {user.uid}
+                  </code>
+                </div>
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  To access this panel, your UID must exist in the <code className="text-foreground">roles_admin</code> Firestore collection.
+                </p>
+              </div>
+              <Button variant="ghost" className="w-full" onClick={() => auth.signOut()}>
+                Sign Out to Switch Account
+              </Button>
+            </CardContent>
+          ) : (
             <form onSubmit={handleAdminLogin}>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -134,214 +327,30 @@ export default function AdminPage() {
                   </div>
                 </div>
               </CardContent>
-              <CardFooter className="flex flex-col gap-4">
+              <CardFooter>
                 <Button type="submit" disabled={isLoggingIn} className="w-full h-14 text-lg font-bold bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-[0_0_20px_rgba(14,165,233,0.3)]">
                   {isLoggingIn ? <Loader2 className="w-5 h-5 animate-spin" /> : <><LogIn className="mr-2 w-5 h-5" /> Login to Console</>}
                 </Button>
-                
-                {user && !adminData && (
-                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl text-xs space-y-2">
-                    <p className="font-bold text-destructive flex items-center gap-1">
-                      <AlertCircle className="w-3 h-3" /> Step 1: Authorize your UID
-                    </p>
-                    <p className="text-muted-foreground">Your Session UID: <code className="text-foreground font-bold">{user.uid}</code></p>
-                    <p className="text-[10px] leading-tight opacity-70">
-                      Go to Firebase Console &gt; Firestore &gt; create collection <code className="text-foreground">roles_admin</code> &gt; add document with ID as your UID.
-                    </p>
-                  </div>
-                )}
               </CardFooter>
             </form>
-          </Card>
-
-          <Card className="bg-primary/5 border-primary/20">
-            <CardHeader className="py-4">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
-                <HelpCircle className="w-4 h-4 text-primary" /> Setup Instructions
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-[11px] space-y-2 text-muted-foreground leading-relaxed">
-              <p>To use the specialized credentials above:</p>
-              <ol className="list-decimal pl-4 space-y-1">
-                <li>Open Firebase Console &gt; Authentication.</li>
-                <li>Add user: <code className="text-primary">pd863253@unmac.admin</code></li>
-                <li>Set password: <code className="text-primary">sd7gen3</code></li>
-                <li>Copy the new User's UID and add it to the <code className="text-foreground">roles_admin</code> Firestore collection.</li>
-              </ol>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="container mx-auto px-4 py-16 space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center">
-            <Lock className="w-6 h-6 text-secondary" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold font-headline">Admin Control Panel</h1>
-            <p className="text-muted-foreground">Authenticated as <span className="text-secondary font-bold">{user.email}</span></p>
-          </div>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => auth.signOut()} className="border-white/10">
-          Sign Out of Console
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="glass-morphism border-white/10">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
-              <Zap className="w-4 h-4" /> Unblock Requests
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold">{allRequests?.length || 0}</p>
-          </CardContent>
+          )}
         </Card>
-        <Card className="glass-morphism border-white/10">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
-              <MessageSquare className="w-4 h-4" /> Support Inquiries
+
+        <Card className="bg-primary/5 border-primary/20">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <HelpCircle className="w-4 h-4 text-primary" /> Setup Instructions
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold">{inquiries?.length || 0}</p>
-          </CardContent>
-        </Card>
-        <Card className="glass-morphism border-white/10">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
-              <Wifi className="w-4 h-4" /> Active Nodes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold">3</p>
+          <CardContent className="text-[11px] space-y-3 text-muted-foreground leading-relaxed">
+            <p>1. Copy your <strong>UID</strong> shown above (if logged in).</p>
+            <p>2. Open <strong>Firebase Console</strong> &gt; <strong>Firestore</strong>.</p>
+            <p>3. Create collection <code className="text-foreground">roles_admin</code>.</p>
+            <p>4. Add a document with <strong>ID</strong> = your UID.</p>
+            <p>5. If using specific credentials (<code className="text-foreground">pd863253</code>), ensure that user is created in <strong>Authentication</strong> and authorized in Firestore.</p>
           </CardContent>
         </Card>
       </div>
-
-      <Tabs defaultValue="requests" className="w-full">
-        <TabsList className="bg-white/5 border border-white/10 mb-6">
-          <TabsTrigger value="requests" className="data-[state=active]:bg-secondary">MAC Requests</TabsTrigger>
-          <TabsTrigger value="inquiries" className="data-[state=active]:bg-secondary">Inquiries</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="requests">
-          <Card className="glass-morphism border-white/10">
-            <CardHeader>
-              <CardTitle>Global MAC Unblock Requests</CardTitle>
-              <CardDescription>Real-time list of all user-submitted MAC unblocking tasks.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>MAC Address</TableHead>
-                    <TableHead>Device</TableHead>
-                    <TableHead>Provider</TableHead>
-                    <TableHead>Plan</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isRequestsLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8">
-                        <Loader2 className="w-4 h-4 animate-spin mx-auto" />
-                      </TableCell>
-                    </TableRow>
-                  ) : allRequests && allRequests.length > 0 ? (
-                    allRequests.map((req) => (
-                      <TableRow key={req.id}>
-                        <TableCell className="text-xs">
-                          {new Date(req.requestDate).toLocaleDateString()} <br />
-                          <span className="text-muted-foreground">{new Date(req.requestDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        </TableCell>
-                        <TableCell className="font-mono text-xs font-bold">{req.macAddress}</TableCell>
-                        <TableCell className="font-medium">{req.deviceName}</TableCell>
-                        <TableCell>{req.wifiProvider}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="capitalize">
-                            {req.subscriptionId === 'FREE_TRIAL' ? 'Trial' : 'Premium'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={req.status === 'Unblocked' ? 'default' : 'secondary'} className={req.status === 'Processing' ? 'animate-pulse' : ''}>
-                            {req.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                        No requests found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="inquiries">
-          <Card className="glass-morphism border-white/10">
-            <CardHeader>
-              <CardTitle>Recent Support Inquiries</CardTitle>
-              <CardDescription>Messages submitted through the contact form.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Subject</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isInquiriesLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8">
-                        <Loader2 className="w-4 h-4 animate-spin mx-auto" />
-                      </TableCell>
-                    </TableRow>
-                  ) : inquiries && inquiries.length > 0 ? (
-                    inquiries.map((inquiry) => (
-                      <TableRow key={inquiry.id}>
-                        <TableCell className="text-xs">{new Date(inquiry.submissionDate).toLocaleDateString()}</TableCell>
-                        <TableCell className="font-bold">{inquiry.name}</TableCell>
-                        <TableCell>{inquiry.email}</TableCell>
-                        <TableCell>{inquiry.subject}</TableCell>
-                        <TableCell>
-                          <Badge variant={inquiry.status === 'New' ? 'default' : 'secondary'}>
-                            {inquiry.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                        No inquiries found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }
