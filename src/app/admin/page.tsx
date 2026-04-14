@@ -1,31 +1,30 @@
-
 "use client";
 
-import { useUser, useDoc, useFirestore, useCollection, useMemoFirebase, useAuth } from '@/firebase';
+import { useUser, useDoc, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, orderBy, collectionGroup } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Lock, Users, MessageSquare, AlertCircle, Loader2, Wifi, Zap, Clock, User, LogIn, Key, HelpCircle, ShieldAlert } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Lock, Zap, MessageSquare, Wifi, User, Key, LogIn, ShieldAlert, AlertCircle, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 const HARDCODED_ADMIN_UID = 'UkGf3zzd3NdY0XzDhMyV1JbUi0X2';
 const ADMIN_USERNAME = 'pd863253';
 const ADMIN_PASSWORD = 'sd7gen3';
 
 export default function AdminPage() {
-  const auth = useAuth();
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
 
-  // Simple Login State
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  // Simple "Not Secure" Login State
+  const [username, setUsername] = useState(ADMIN_USERNAME);
+  const [password, setPassword] = useState(ADMIN_PASSWORD);
   const [isSimpleAuthenticated, setIsSimpleAuthenticated] = useState(false);
 
   // Check Admin Privileges via Firestore DBAC
@@ -39,7 +38,7 @@ export default function AdminPage() {
   // Determine effective admin status based on UID
   const hasAdminUid = !!adminData || (user?.uid === HARDCODED_ADMIN_UID);
 
-  // Fetch Inquiries - Guarded by admin check
+  // Fetch Inquiries - Guarded by simple auth and admin UID
   const inquiriesQuery = useMemoFirebase(() => {
     if (!user || !hasAdminUid || !isSimpleAuthenticated) return null;
     return query(collection(db, 'contactInquiries'), orderBy('submissionDate', 'desc'));
@@ -47,7 +46,7 @@ export default function AdminPage() {
 
   const { data: inquiries, isLoading: isInquiriesLoading } = useCollection(inquiriesQuery);
 
-  // Fetch All Unblock Requests using Collection Group - Guarded by admin check
+  // Fetch All Unblock Requests - Guarded by simple auth and admin UID
   const allRequestsQuery = useMemoFirebase(() => {
     if (!user || !hasAdminUid || !isSimpleAuthenticated) return null;
     return query(collectionGroup(db, 'unblockRequests'), orderBy('requestDate', 'desc'));
@@ -59,11 +58,11 @@ export default function AdminPage() {
     e.preventDefault();
     if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
       setIsSimpleAuthenticated(true);
-      toast({ title: "Login Successful", description: "Dashboard unlocked." });
+      toast({ title: "Access Granted", description: "Admin dashboard unlocked." });
     } else {
       toast({ 
         variant: "destructive", 
-        title: "Access Denied", 
+        title: "Login Failed", 
         description: "Invalid credentials." 
       });
     }
@@ -77,7 +76,7 @@ export default function AdminPage() {
     );
   }
 
-  // Dashboard View (Authorized + Simple Logged In)
+  // Dashboard View
   if (isSimpleAuthenticated && user && hasAdminUid) {
     return (
       <div className="container mx-auto px-4 py-16 space-y-8">
@@ -88,7 +87,7 @@ export default function AdminPage() {
             </div>
             <div>
               <h1 className="text-3xl font-bold font-headline">Admin Control Panel</h1>
-              <p className="text-muted-foreground">Authenticated as <span className="text-secondary font-bold">{user.email}</span></p>
+              <p className="text-muted-foreground">Logged in as <span className="text-secondary font-bold">{user.email}</span></p>
             </div>
           </div>
           <Button variant="outline" size="sm" onClick={() => setIsSimpleAuthenticated(false)} className="border-white/10">
@@ -110,7 +109,7 @@ export default function AdminPage() {
           <Card className="glass-morphism border-white/10">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" /> Support Inquiries
+                <MessageSquare className="w-4 h-4" /> Inquiries
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -120,11 +119,11 @@ export default function AdminPage() {
           <Card className="glass-morphism border-white/10">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
-                <Wifi className="w-4 h-4" /> Active Nodes
+                <Wifi className="w-4 h-4" /> Nodes
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-4xl font-bold">3</p>
+              <p className="text-4xl font-bold">Online</p>
             </CardContent>
           </Card>
         </div>
@@ -138,8 +137,8 @@ export default function AdminPage() {
           <TabsContent value="requests">
             <Card className="glass-morphism border-white/10">
               <CardHeader>
-                <CardTitle>Global MAC Unblock Requests</CardTitle>
-                <CardDescription>Real-time list of all user-submitted MAC unblocking tasks.</CardDescription>
+                <CardTitle>Global MAC Requests</CardTitle>
+                <CardDescription>All user-submitted unblocking tasks.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -149,14 +148,13 @@ export default function AdminPage() {
                       <TableHead>MAC Address</TableHead>
                       <TableHead>Device</TableHead>
                       <TableHead>Provider</TableHead>
-                      <TableHead>Plan</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isRequestsLoading ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
+                        <TableCell colSpan={5} className="text-center py-8">
                           <Loader2 className="w-4 h-4 animate-spin mx-auto" />
                         </TableCell>
                       </TableRow>
@@ -164,19 +162,13 @@ export default function AdminPage() {
                       allRequests.map((req) => (
                         <TableRow key={req.id}>
                           <TableCell className="text-xs">
-                            {new Date(req.requestDate).toLocaleDateString()} <br />
-                            <span className="text-muted-foreground">{new Date(req.requestDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            {new Date(req.requestDate).toLocaleDateString()}
                           </TableCell>
                           <TableCell className="font-mono text-xs font-bold">{req.macAddress}</TableCell>
-                          <TableCell className="font-medium">{req.deviceName}</TableCell>
+                          <TableCell>{req.deviceName}</TableCell>
                           <TableCell>{req.wifiProvider}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="capitalize">
-                              {req.subscriptionId === 'FREE_TRIAL' ? 'Trial' : 'Premium'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={req.status === 'Unblocked' ? 'default' : 'secondary'} className={req.status === 'Processing' ? 'animate-pulse' : ''}>
+                            <Badge variant={req.status === 'Unblocked' ? 'default' : 'secondary'}>
                               {req.status}
                             </Badge>
                           </TableCell>
@@ -184,7 +176,7 @@ export default function AdminPage() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                           No requests found.
                         </TableCell>
                       </TableRow>
@@ -198,8 +190,7 @@ export default function AdminPage() {
           <TabsContent value="inquiries">
             <Card className="glass-morphism border-white/10">
               <CardHeader>
-                <CardTitle>Recent Support Inquiries</CardTitle>
-                <CardDescription>Messages submitted through the contact form.</CardDescription>
+                <CardTitle>Contact Inquiries</CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -209,13 +200,12 @@ export default function AdminPage() {
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Subject</TableHead>
-                      <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isInquiriesLoading ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8">
+                        <TableCell colSpan={4} className="text-center py-8">
                           <Loader2 className="w-4 h-4 animate-spin mx-auto" />
                         </TableCell>
                       </TableRow>
@@ -226,16 +216,11 @@ export default function AdminPage() {
                           <TableCell className="font-bold">{inquiry.name}</TableCell>
                           <TableCell>{inquiry.email}</TableCell>
                           <TableCell>{inquiry.subject}</TableCell>
-                          <TableCell>
-                            <Badge variant={inquiry.status === 'New' ? 'default' : 'secondary'}>
-                              {inquiry.status}
-                            </Badge>
-                          </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                           No inquiries found.
                         </TableCell>
                       </TableRow>
@@ -250,7 +235,7 @@ export default function AdminPage() {
     );
   }
 
-  // Login Gateway (Unauthenticated or Unauthorized)
+  // Simple Login Gateway
   return (
     <div className="container mx-auto px-4 py-24 flex justify-center">
       <div className="w-full max-w-md space-y-6">
@@ -261,10 +246,10 @@ export default function AdminPage() {
               {(!user || !hasAdminUid) ? <ShieldAlert className="w-8 h-8 text-destructive" /> : <Lock className="w-8 h-8 text-secondary" />}
             </div>
             <CardTitle className="text-3xl font-bold font-headline">
-              {(!user || !hasAdminUid) ? "Access Restricted" : "Admin Portal"}
+              {(!user || !hasAdminUid) ? "Access Denied" : "Simple Admin Login"}
             </CardTitle>
             <CardDescription>
-              {(!user || !hasAdminUid) ? "Firebase authorization required" : "Secure Dashboard Access"}
+              {(!user || !hasAdminUid) ? "UID not authorized for database access" : "Enter prototype credentials"}
             </CardDescription>
           </CardHeader>
           
@@ -272,30 +257,23 @@ export default function AdminPage() {
             <CardContent className="space-y-6">
               <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl space-y-3">
                 <p className="text-xs font-bold text-destructive uppercase tracking-widest flex items-center gap-2">
-                  <AlertCircle className="w-3 h-3" /> UID Authorization Needed
+                  <AlertCircle className="w-3 h-3" /> Authorization Required
                 </p>
                 <div className="space-y-1">
-                  <p className="text-[10px] text-muted-foreground uppercase">Your Current UID</p>
+                  <p className="text-[10px] text-muted-foreground uppercase">Your UID</p>
                   <code className="block p-2 bg-black/30 rounded text-xs break-all border border-white/5 font-mono select-all">
                     {user?.uid || "NOT_LOGGED_IN"}
                   </code>
                 </div>
                 {!user && (
-                  <p className="text-xs text-primary font-bold">Please login to the app first using Google or Email.</p>
+                  <Link href="/login" className="block w-full">
+                    <Button className="w-full">Sign In to Authenticate</Button>
+                  </Link>
                 )}
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  Your UID must be authorized in the <code className="text-foreground">roles_admin</code> collection for data access.
+                  Your UID must be authorized in the Firebase rules or roles_admin collection to fetch data.
                 </p>
               </div>
-              {!user ? (
-                <Link href="/login" className="block w-full">
-                  <Button className="w-full h-12">Login to App</Button>
-                </Link>
-              ) : (
-                <Button variant="ghost" className="w-full" onClick={() => auth.signOut()}>
-                  Sign Out to Switch Account
-                </Button>
-              )}
             </CardContent>
           ) : (
             <form onSubmit={handleSimpleLogin}>
@@ -308,7 +286,7 @@ export default function AdminPage() {
                       id="username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      placeholder="Enter username"
+                      placeholder="Username"
                       className="pl-10 bg-background/50 border-white/10 h-12"
                     />
                   </div>
@@ -327,27 +305,14 @@ export default function AdminPage() {
                     />
                   </div>
                 </div>
-              </CardContent>
-              <CardFooter>
-                <Button type="submit" className="w-full h-14 text-lg font-bold bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-[0_0_20px_rgba(14,165,233,0.3)]">
+              </form>
+              <CardFooter className="pt-4">
+                <Button onClick={handleSimpleLogin} className="w-full h-14 text-lg font-bold bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-[0_0_20px_rgba(14,165,233,0.3)]">
                   <LogIn className="mr-2 w-5 h-5" /> Unlock Dashboard
                 </Button>
               </CardFooter>
             </form>
           )}
-        </Card>
-
-        <Card className="bg-primary/5 border-primary/20">
-          <CardHeader className="py-4">
-            <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <HelpCircle className="w-4 h-4 text-primary" /> Login Info
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="text-[11px] space-y-3 text-muted-foreground leading-relaxed">
-            <p>1. Ensure you are logged into the app with the authorized UID.</p>
-            <p>2. Simple Login: <strong>pd863253</strong> / <strong>sd7gen3</strong>.</p>
-            <p>3. This bypasses the need for a separate admin auth account.</p>
-          </CardContent>
         </Card>
       </div>
     </div>

@@ -2,16 +2,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * UNMAC SECURITY RULES
-     * 
-     * Core Philosophy:
-     * Strict User-Ownership for standard data, with full override for Admins.
-     * Supports Collection Group queries for administrative oversight.
-     * 
-     * Hardcoded Admin: UkGf3zzd3NdY0XzDhMyV1JbUi0X2
-     */
-
     // --- Helper Functions ---
 
     function isSignedIn() {
@@ -29,57 +19,39 @@ service cloud.firestore {
       );
     }
 
-    // Used for update/delete to ensure the document exists and the requester owns it
-    function isExistingOwner(userId) {
-      return resource != null && isOwner(userId);
+    // GLOBAL OVERRIDE: Admin UID has full access to everything
+    match /{document=**} {
+      allow read, write: if isAdmin();
     }
 
-    function isExistingAdmin() {
-      return resource != null && isAdmin();
-    }
-
-    // --- Collection Group Rules (Required for Admin Dashboard) ---
-    
-    match /{path=**}/unblockRequests/{unblockRequestId} {
-      allow read: if isAdmin();
-    }
-
-    // --- Standard Collection Rules ---
+    // --- Standard Collection Rules (for non-admins) ---
 
     match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
-      allow list: if isAdmin();
+      allow get: if isOwner(userId);
       allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) || isExistingAdmin();
-      allow delete: if isExistingAdmin();
+      allow update: if isOwner(userId);
 
       match /subscriptions/{subscriptionId} {
-        allow get, list: if isOwner(userId) || isAdmin();
-        allow create, update, delete: if isAdmin();
+        allow get, list: if isOwner(userId);
       }
 
       match /unblockRequests/{unblockRequestId} {
-        allow get, list: if isOwner(userId) || isAdmin();
+        allow get, list: if isOwner(userId);
         allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update, delete: if isAdmin();
       }
 
       match /payments/{paymentId} {
-        allow get, list: if isOwner(userId) || isAdmin();
-        allow create: if isOwner(userId) 
-                      && request.resource.data.userId == userId;
-        allow update, delete: if isAdmin();
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
       }
-    }
-
-    match /roles_admin/{adminId} {
-      allow get: if isOwner(adminId) || isAdmin();
-      allow list, create, update, delete: if false; 
     }
 
     match /contactInquiries/{inquiryId} {
       allow create: if true;
-      allow get, list, update, delete: if isAdmin();
+    }
+    
+    match /roles_admin/{adminId} {
+      allow get: if isOwner(adminId);
     }
   }
 }
