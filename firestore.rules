@@ -65,5 +65,12 @@ service cloud.firestore {
     match /roles_admin/{adminId} {
       allow get: if isOwner(adminId) || isAdmin();
     }
+
+    match /redeemCodes/{codeId} {
+      // Users can only get a specific code if they are signed in (to verify it)
+      allow get: if isSignedIn();
+      // Only admins can list, create, update, or delete codes
+      allow list, create, update, delete: if isAdmin();
+    }
   }
 }

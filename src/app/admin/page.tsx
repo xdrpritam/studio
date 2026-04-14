@@ -6,14 +6,15 @@ import { doc, collection, query, orderBy, collectionGroup } from 'firebase/fires
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Lock, Zap, MessageSquare, Wifi, User, Key, LogIn, ShieldAlert, AlertCircle, Loader2, CreditCard, CheckCircle, ExternalLink, ShieldCheck } from 'lucide-react';
+import { Lock, Zap, MessageSquare, Wifi, User, Key, LogIn, ShieldAlert, AlertCircle, Loader2, CreditCard, CheckCircle, ExternalLink, ShieldCheck, Plus, Ticket, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
-import { updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import Link from 'next/link';
 
 const HARDCODED_ADMIN_UID = 'gKJKDmDMZmg8RvUT119XStZ7Xpt1';
@@ -28,6 +29,10 @@ export default function AdminPage() {
   const [passwordInput, setPasswordInput] = useState('');
   const [isSimpleAuthenticated, setIsSimpleAuthenticated] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
+
+  // Redeem Code Creation State
+  const [newCode, setNewCode] = useState('');
+  const [isMultiUse, setIsMultiUse] = useState(false);
 
   const adminRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -58,6 +63,13 @@ export default function AdminPage() {
 
   const { data: allPayments, isLoading: isPaymentsLoading } = useCollection(allPaymentsQuery);
 
+  const redeemCodesQuery = useMemoFirebase(() => {
+    if (!user || !hasAdminUid || !isSimpleAuthenticated) return null;
+    return query(collection(db, 'redeemCodes'), orderBy('createdAt', 'desc'));
+  }, [db, user, hasAdminUid, isSimpleAuthenticated]);
+
+  const { data: redeemCodes, isLoading: isCodesLoading } = useCollection(redeemCodesQuery);
+
   const handleSimpleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (usernameInput === ADMIN_USERNAME && passwordInput === ADMIN_PASSWORD) {
@@ -79,13 +91,11 @@ export default function AdminPage() {
     const paymentRef = doc(db, 'users', payment.userId, 'payments', payment.id);
     const subRef = doc(db, 'users', payment.userId, 'subscriptions', 'active_subscription');
     
-    // 1. Mark Payment as Completed
     updateDocumentNonBlocking(paymentRef, { 
       status: 'Completed',
       updatedAt: new Date().toISOString()
     });
     
-    // 2. Activate Subscription
     setDocumentNonBlocking(subRef, {
       id: 'active_subscription',
       userId: payment.userId,
@@ -97,7 +107,6 @@ export default function AdminPage() {
       updatedAt: new Date().toISOString(),
     }, { merge: true });
 
-    // 3. Update the associated Unblock Request
     if (payment.requestId) {
       const requestRef = doc(db, 'users', payment.userId, 'unblockRequests', payment.requestId);
       updateDocumentNonBlocking(requestRef, {
@@ -111,6 +120,38 @@ export default function AdminPage() {
       description: "Access activated for the user.",
     });
     setProcessingId(null);
+  };
+
+  const handleCreateCode = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCode) return;
+
+    const codeId = newCode.toUpperCase().trim();
+    const codeRef = doc(db, 'redeemCodes', codeId);
+
+    setDocumentNonBlocking(codeRef, {
+      id: codeId,
+      planType: 'PaidMonthly',
+      isUsed: false,
+      multiUse: isMultiUse,
+      createdAt: new Date().toISOString(),
+    }, { merge: true });
+
+    toast({
+      title: "Code Created",
+      description: `Voucher ${codeId} is now active.`,
+    });
+    setNewCode('');
+    setIsMultiUse(false);
+  };
+
+  const handleDeleteCode = (codeId: string) => {
+    const codeRef = doc(db, 'redeemCodes', codeId);
+    deleteDocumentNonBlocking(codeRef);
+    toast({
+      title: "Code Deleted",
+      description: `Voucher ${codeId} has been removed.`,
+    });
   };
 
   if (isUserLoading || (user && isAdminLoading)) {
@@ -163,11 +204,11 @@ export default function AdminPage() {
           <Card className="glass-card">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" /> Inquiries
+                <Ticket className="w-4 h-4" /> Vouchers
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-4xl font-bold font-headline text-white">{inquiries?.length || 0}</p>
+              <p className="text-4xl font-bold font-headline text-white">{redeemCodes?.length || 0}</p>
             </CardContent>
           </Card>
           <Card className="glass-card">
@@ -186,6 +227,7 @@ export default function AdminPage() {
           <TabsList className="bg-white/5 border border-white/10 mb-6 p-1 h-12 flex w-fit">
             <TabsTrigger value="requests" className="data-[state=active]:bg-primary h-full px-6">MAC Requests</TabsTrigger>
             <TabsTrigger value="payments" className="data-[state=active]:bg-primary h-full px-6">UTR Logs</TabsTrigger>
+            <TabsTrigger value="redeem" className="data-[state=active]:bg-primary h-full px-6">Redeem Codes</TabsTrigger>
             <TabsTrigger value="inquiries" className="data-[state=active]:bg-primary h-full px-6">Inquiries</TabsTrigger>
           </TabsList>
 
@@ -316,6 +358,92 @@ export default function AdminPage() {
                 </Table>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="redeem">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <Card className="glass-card">
+                <CardHeader>
+                  <CardTitle className="text-white">Create Voucher</CardTitle>
+                  <CardDescription>Generate new redeemable codes.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleCreateCode} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="code" className="text-white">Code</Label>
+                      <Input 
+                        id="code"
+                        placeholder="e.g., PROMO100"
+                        value={newCode}
+                        onChange={(e) => setNewCode(e.target.value)}
+                        className="bg-background/50 border-white/10"
+                      />
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="multi" 
+                        checked={isMultiUse} 
+                        onCheckedChange={(checked) => setIsMultiUse(!!checked)}
+                      />
+                      <Label htmlFor="multi" className="text-sm font-medium text-white cursor-pointer">Multi-use code</Label>
+                    </div>
+                    <Button type="submit" className="w-full neon-glow font-bold">
+                      <Plus className="w-4 h-4 mr-2" /> Generate Code
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+
+              <Card className="lg:col-span-2 glass-card overflow-hidden">
+                <CardHeader>
+                  <CardTitle className="text-white">Active Vouchers</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-white/5 hover:bg-transparent">
+                        <TableHead>Code</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isCodesLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-12">
+                            <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
+                          </TableCell>
+                        </TableRow>
+                      ) : redeemCodes && redeemCodes.length > 0 ? (
+                        redeemCodes.map((code) => (
+                          <TableRow key={code.id} className="border-white/5 hover:bg-white/5">
+                            <TableCell className="font-mono font-bold text-primary">{code.id}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{code.multiUse ? 'Multi-use' : 'Single-use'}</TableCell>
+                            <TableCell>
+                              <Badge variant={code.isUsed && !code.multiUse ? 'secondary' : 'default'} className={code.isUsed && !code.multiUse ? 'bg-muted' : 'bg-green-500/20 text-green-500 border-green-500/30'}>
+                                {code.isUsed && !code.multiUse ? 'Used' : 'Active'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="icon" onClick={() => handleDeleteCode(code.id)} className="text-destructive hover:bg-destructive/10">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+                            No active vouchers.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="inquiries">

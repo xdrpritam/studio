@@ -276,6 +276,35 @@
         "submissionDate",
         "status"
       ]
+    },
+    "RedeemCode": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "RedeemCode",
+      "type": "object",
+      "description": "Stores redeemable voucher codes for premium access activation.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The actual redeem code (e.g., 'PROMO100')."
+        },
+        "planType": {
+          "type": "string",
+          "description": "The plan type this code activates (e.g., 'PaidMonthly')."
+        },
+        "isUsed": {
+          "type": "boolean",
+          "description": "Whether the code has been redeemed (for single-use codes)."
+        },
+        "multiUse": {
+          "type": "boolean",
+          "description": "Whether the code can be used multiple times."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "planType", "isUsed", "multiUse", "createdAt"]
     }
   },
   "auth": {
@@ -294,7 +323,7 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores individual user profiles. Access is restricted to the user themselves for their own profile (read/update) or to administrators (read/write all). The `userId` matches `request.auth.uid` for self-access."
+          "description": "Stores individual user profiles."
         }
       },
       {
@@ -304,7 +333,7 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "A top-level collection used for database-backed access control (DBAC). The existence of a document where `adminId` matches `request.auth.uid` signifies administrative privileges. Used for checking admin roles in security rules (e.g., `exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid))`)."
+          "description": "Admin privileges marker."
         }
       },
       {
@@ -314,17 +343,7 @@
           "schema": {
             "$ref": "#/backend/entities/Subscription"
           },
-          "description": "Stores subscription details for each user. `userId` is denormalized into the path for authorization independence, allowing direct `request.auth.uid == userId` checks for access to a user's subscriptions. Supports QAPs by enabling secure `list` operations for a specific user.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user who owns this subscription. Matches the parent `users` collection ID."
-            },
-            {
-              "name": "subscriptionId",
-              "description": "The unique identifier for a specific subscription document."
-            }
-          ]
+          "description": "User subscriptions."
         }
       },
       {
@@ -334,17 +353,7 @@
           "schema": {
             "$ref": "#/backend/entities/UnblockRequest"
           },
-          "description": "Stores unblock requests made by a user. `userId` is denormalized into the path for authorization independence, allowing direct `request.auth.uid == userId` checks. This supports QAPs by enabling secure `list` operations for a user's requests.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user who made this unblock request. Matches the parent `users` collection ID."
-            },
-            {
-              "name": "unblockRequestId",
-              "description": "The unique identifier for a specific unblock request document."
-            }
-          ]
+          "description": "User unblock requests."
         }
       },
       {
@@ -354,17 +363,7 @@
           "schema": {
             "$ref": "#/backend/entities/Payment"
           },
-          "description": "Stores payment transaction records for each user, including UPI specifics. `userId` is denormalized into the path for authorization independence, allowing direct `request.auth.uid == userId` checks. This supports QAPs by enabling secure `list` operations for a user's payments.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user who made this payment. Matches the parent `users` collection ID."
-            },
-            {
-              "name": "paymentId",
-              "description": "The unique identifier for a specific payment transaction document."
-            }
-          ]
+          "description": "User payments."
         }
       },
       {
@@ -374,16 +373,19 @@
           "schema": {
             "$ref": "#/backend/entities/ContactInquiry"
           },
-          "description": "A top-level collection for contact inquiries submitted by users (potentially anonymous). Any user can create a document, but only administrators have read, update, and delete access. This segregation supports different access patterns for public submissions versus private user data.",
-          "params": [
-            {
-              "name": "inquiryId",
-              "description": "The unique identifier for a specific contact inquiry document."
-            }
-          ]
+          "description": "Public inquiries."
+        }
+      },
+      {
+        "path": "/redeemCodes/{codeId}",
+        "definition": {
+          "entityName": "RedeemCode",
+          "schema": {
+            "$ref": "#/backend/entities/RedeemCode"
+          },
+          "description": "Storage for redeemable vouchers."
         }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to be secure, scalable, and debuggable, adhering strictly to the core design principles. It prioritizes **Authorization Independence** by denormalizing ownership information directly into the document paths. For all user-specific data, the `userId` is included as a path segment (e.g., `/users/{userId}/subscriptions/{subscriptionId}`). This eliminates the need for `get()` calls in security rules to check parent document ownership, simplifying rules and enabling atomic operations. For example, a user's subscription can be created without first retrieving their `User` document to verify ownership.\n\n**Structural Segregation** is implemented by keeping data with different security postures in distinct collections. For instance, user profiles, their subscriptions, unblock requests, and payments are nested under `/users/{userId}/` paths, ensuring that a user's personal data is logically and securely separated. Publicly submitted `ContactInquiry` data, which requires different access rules (anonymous create, admin read/write), resides in a top-level collection (`/contactInquiries/{inquiryId}`). Admin roles are managed via a dedicated top-level `roles_admin` collection, leveraging the **DBAC (No Custom Claims)** principle and 'Existence over Content' for authorization.\n\n**QAPs (Rules are not Filters)** are robustly supported. For user-owned collections like `subscriptions`, `unblockRequests`, and `payments`, `list` operations are inherently secure because the path wildcards (`{userId}`) can be directly compared against `request.auth.uid` in security rules, ensuring users can only list their own data. For admin functionalities, the existence check against `/roles_admin/$(request.auth.uid)` grants broader `list` access across all relevant collections. This structure ensures that security rules primarily grant or deny access based on the request, rather than relying on the rules to filter results, which is less efficient and prone to errors. The explicit `status` fields in entities like `Subscription`, `UnblockRequest`, and `Payment` ensure clear state modeling, further enhancing rule clarity and data integrity. The `Payment` entity includes `transactionId` and `upiApp` fields to support UPI payment validation, specifically for PhonePe as requested."
+    ]
   }
 }

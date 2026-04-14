@@ -10,7 +10,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUser, useFirestore } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -66,7 +66,7 @@ function PaymentContent() {
         userId: user.uid,
         planType: 'PaidMonthly',
         startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60000).toISOString(),
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         status: 'Active',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -109,7 +109,7 @@ function PaymentContent() {
     }, 2000);
   };
 
-  const handleRedeem = () => {
+  const handleRedeem = async () => {
     if (!redeemCode || redeemCode.length < 5) {
       toast({
         variant: "destructive",
@@ -120,23 +120,47 @@ function PaymentContent() {
     }
 
     setIsValidating(true);
-    setTimeout(() => {
-      const validCodes = ['PROMO2025', 'UNMAC100', 'FREEDOM'];
-      if (validCodes.includes(redeemCode.toUpperCase())) {
-        savePaymentRecord('VOUCHER', redeemCode.toUpperCase(), true);
-        toast({
-          title: "Code Redeemed!",
-          description: "Voucher applied successfully. Access granted.",
-        });
+    try {
+      const codeRef = doc(db, 'redeemCodes', redeemCode.toUpperCase());
+      const codeSnap = await getDoc(codeRef);
+
+      if (codeSnap.exists()) {
+        const codeData = codeSnap.data();
+        
+        if (codeData.isUsed && !codeData.multiUse) {
+          toast({
+            variant: "destructive",
+            title: "Code Expired",
+            description: "This code has already been used.",
+          });
+        } else {
+          // Mark code as used if not multi-use
+          if (!codeData.multiUse) {
+            updateDocumentNonBlocking(codeRef, { isUsed: true });
+          }
+          
+          savePaymentRecord('VOUCHER', redeemCode.toUpperCase(), true);
+          toast({
+            title: "Code Redeemed!",
+            description: "Voucher applied successfully. Access granted.",
+          });
+        }
       } else {
         toast({
           variant: "destructive",
-          title: "Redemption Failed",
-          description: "This code is invalid or has already been used.",
+          title: "Invalid Code",
+          description: "This voucher code does not exist.",
         });
       }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Redemption Failed",
+        description: "An error occurred. Please try again later.",
+      });
+    } finally {
       setIsValidating(false);
-    }, 1500);
+    }
   };
 
   return (
