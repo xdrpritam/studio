@@ -1,3 +1,4 @@
+
 # UnMac | MAC Address Unblocker
 
 This is a Next.js 15 application built with React, ShadCN UI, and Tailwind CSS.
@@ -44,7 +45,7 @@ Access to `/admin` is restricted via Firestore Security Rules. To grant yourself
 
 - **MAC Unblock Request:** Easy form to submit device details for unblocking.
 - **AI Troubleshooting:** Smart assistant to help diagnose connectivity issues.
-- **Trial System:** 15-minute free trial for new users.
+- **Trial System:** 1 hour free trial for new users.
 - **Dashboard:** Real-time monitoring of unblock status and session countdown.
 - **Admin Panel:** Comprehensive overview of all user requests and inquiries.
 - **Redeem Codes:** Dedicated voucher system for premium access activation.

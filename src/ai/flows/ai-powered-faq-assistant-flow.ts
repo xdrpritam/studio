@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview An AI-powered FAQ assistant for UnMac.
@@ -36,7 +37,7 @@ Here is information about UnMac:
 
 **Core Features:**
 -   **User Input Form:** Users input MAC Address, Device Name, select WiFi Provider (Jio, Airtel, BSNL), enter WiFi Name (SSID), and choose a plan (Free Trial or Paid).
--   **Trial Period Activation:** Offers a 15-minute free trial for unblocking, with a countdown timer upon activation.
+-   **Trial Period Activation:** Offers a 1-hour free trial for unblocking, with a countdown timer upon activation.
 -   **Payment System:** A paid plan costs ₹100 for 1 month. Users can upgrade to premium, and a payment success confirmation is displayed.
 -   **User Dashboard:** After submission, displays submitted details, unblock status ('Processing' / 'Unblocked'), a countdown timer for trial users, and plan validity for paid users.
 -   **Backend Logic:** Stores user input, validates MAC address format, handles trial vs. paid logic, and is designed for future API integration.
@@ -44,7 +45,7 @@ Here is information about UnMac:
 -   **Informational Content Pages:** Includes 'About Us', 'FAQ', and a 'Contact Form'.
 
 **Pricing:**
--   Free Trial: 15 minutes.
+-   Free Trial: 1 hour.
 -   Paid Plan: ₹100 for 1 month.
 
 **Supported Networks:** Jio, Airtel, BSNL.

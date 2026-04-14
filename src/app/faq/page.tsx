@@ -24,7 +24,7 @@ const initialFaqs = [
   },
   {
     q: "What is your refund policy?",
-    a: "We offer a 15-minute free trial to ensure compatibility. Once a paid plan is activated, refunds are only issued if the service fails to perform as described."
+    a: "We offer a 1-hour free trial to ensure compatibility. Once a paid plan is activated, refunds are only issued if the service fails to perform as described."
   }
 ];
 

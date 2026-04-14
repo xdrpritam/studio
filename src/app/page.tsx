@@ -65,7 +65,6 @@ export default function Home() {
                 className="object-cover rounded-[2rem] opacity-70 mix-blend-lighten w-full h-full transform group-hover:scale-110 transition-transform duration-1000"
                 data-ai-hint="network technology"
               />
-              {/* Removed overlay div as requested */}
             </div>
             {/* Visual Accents */}
             <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-secondary/30 rounded-full blur-2xl -z-10" />
@@ -102,7 +101,7 @@ export default function Home() {
             {[
               { icon: Zap, title: "Hyper Speed", desc: "Get back online in under 60 seconds with our high-availability API endpoints.", color: "text-primary" },
               { icon: ShieldCheck, title: "Zero Trust", desc: "End-to-end encryption for all MAC metadata. We don't log your traffic.", color: "text-secondary" },
-              { icon: Clock, title: "Free Tier", desc: "Test the infrastructure with a 15-minute high-priority trial session.", color: "text-primary" },
+              { icon: Clock, title: "Free Tier", desc: "Test the infrastructure with a 1 hour high-priority trial session.", color: "text-primary" },
               { icon: Globe, title: "Edge Network", desc: "Global distribution ensures minimal delay regardless of your ISP.", color: "text-secondary" },
             ].map((f, i) => (
               <div key={i} className="group p-10 rounded-3xl glass-card relative overflow-hidden">

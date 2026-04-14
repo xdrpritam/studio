@@ -68,11 +68,11 @@ export default function UnblockPage() {
     const requestId = `REQ_${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
     const requestRef = doc(db, 'users', user.uid, 'unblockRequests', requestId);
 
+    // Trial is now 1 hour (60 minutes)
     const expiresAt = values.plan === 'trial' 
-      ? new Date(Date.now() + 15 * 60000).toISOString() 
+      ? new Date(Date.now() + 60 * 60000).toISOString() 
       : new Date(Date.now() + 30 * 24 * 60 * 60000).toISOString();
 
-    // Trials are activated immediately. Paid ones wait for admin approval (Pending).
     const initialStatus = values.plan === 'trial' ? 'Unblocked' : 'Pending';
 
     setDocumentNonBlocking(requestRef, {
@@ -95,7 +95,7 @@ export default function UnblockPage() {
       } else {
         toast({
           title: "Trial Activated!",
-          description: "Your 15-minute trial has started. Redirecting to dashboard...",
+          description: "Your 1-hour free trial has started. Redirecting to dashboard...",
         });
         router.push('/dashboard');
       }
@@ -259,7 +259,7 @@ export default function UnblockPage() {
                                     <span className="font-bold text-lg">Free Trial</span>
                                     {field.value === 'trial' && <CheckCircle2 className="w-5 h-5 text-primary" />}
                                   </div>
-                                  <span className="text-muted-foreground text-sm">15 minutes access</span>
+                                  <span className="text-muted-foreground text-sm">1 hour access</span>
                                   <span className="mt-4 font-headline font-bold text-xl">₹0</span>
                                 </FormLabel>
                               </FormItem>
