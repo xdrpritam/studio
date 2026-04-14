@@ -44,11 +44,9 @@ export function Navbar() {
           <Link href="/contact" className="hover:text-primary transition-colors flex items-center gap-1.5">
             <PhoneCall className="w-4 h-4" /> Contact
           </Link>
-          {user && (
-            <Link href="/admin" className={`${isAdmin ? 'text-secondary' : 'text-muted-foreground'} hover:text-primary transition-colors flex items-center gap-1.5 font-bold`}>
-              <Lock className="w-4 h-4" /> Admin
-            </Link>
-          )}
+          <Link href="/admin" className={`${isAdmin ? 'text-secondary' : 'text-muted-foreground'} hover:text-primary transition-colors flex items-center gap-1.5 font-bold`}>
+            <Lock className="w-4 h-4" /> Admin
+          </Link>
         </div>
 
         <div className="flex items-center gap-3">
