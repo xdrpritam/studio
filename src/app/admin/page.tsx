@@ -80,7 +80,10 @@ export default function AdminPage() {
     const subRef = doc(db, 'users', payment.userId, 'subscriptions', 'active_subscription');
     
     // 1. Mark Payment as Completed
-    updateDocumentNonBlocking(paymentRef, { status: 'Completed' });
+    updateDocumentNonBlocking(paymentRef, { 
+      status: 'Completed',
+      updatedAt: new Date().toISOString()
+    });
     
     // 2. Activate Subscription
     setDocumentNonBlocking(subRef, {
@@ -88,13 +91,13 @@ export default function AdminPage() {
       userId: payment.userId,
       planType: 'PaidMonthly',
       startDate: new Date().toISOString(),
-      endDate: new Date(Date.now() + 30 * 24 * 60 * 60000).toISOString(),
+      endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
       status: 'Active',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }, { merge: true });
 
-    // 3. Update the associated Unblock Request if it exists
+    // 3. Update the associated Unblock Request
     if (payment.requestId) {
       const requestRef = doc(db, 'users', payment.userId, 'unblockRequests', payment.requestId);
       updateDocumentNonBlocking(requestRef, {

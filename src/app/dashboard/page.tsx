@@ -44,8 +44,7 @@ export default function DashboardPage() {
   const { data: payments, isLoading: isPaymentsLoading } = useCollection(paymentsQuery);
   const paymentData = payments && payments.length > 0 ? payments[0] : null;
 
-  // Effective status is based on the unblock request itself, 
-  // but we also check the payment if it's pending.
+  // Effective status is based on the unblock request itself.
   const effectiveStatus = requestData?.status || 'Unknown';
 
   useEffect(() => {
