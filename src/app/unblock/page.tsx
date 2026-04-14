@@ -14,6 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
+import { useUser, useFirestore } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
 
@@ -27,6 +30,8 @@ const formSchema = z.object({
 
 export default function UnblockPage() {
   const router = useRouter();
+  const { user } = useUser();
+  const db = useFirestore();
   const [loading, setLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -41,24 +46,40 @@ export default function UnblockPage() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setLoading(true);
-    // Simulate API storage and processing
-    setTimeout(() => {
-      // Save to local storage for persistence in this demo
-      const requestData = {
-        ...values,
-        id: Math.random().toString(36).substr(2, 9),
-        status: 'Processing',
-        createdAt: new Date().toISOString(),
-        expiresAt: values.plan === 'trial' 
-          ? new Date(Date.now() + 15 * 60000).toISOString() 
-          : new Date(Date.now() + 30 * 24 * 60 * 60000).toISOString(),
-      };
-      
-      localStorage.setItem('unmac_active_request', JSON.stringify(requestData));
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Authentication Required",
+        description: "Please login to submit an unblock request.",
+      });
+      router.push('/login');
+      return;
+    }
 
+    setLoading(true);
+    
+    const requestId = Math.random().toString(36).substr(2, 9);
+    const requestRef = doc(db, 'users', user.uid, 'unblockRequests', requestId);
+
+    const expiresAt = values.plan === 'trial' 
+      ? new Date(Date.now() + 15 * 60000).toISOString() 
+      : new Date(Date.now() + 30 * 24 * 60 * 60000).toISOString();
+
+    setDocumentNonBlocking(requestRef, {
+      id: requestId,
+      userId: user.uid,
+      subscriptionId: values.plan === 'trial' ? 'FREE_TRIAL' : 'PREMIUM',
+      macAddress: values.macAddress,
+      deviceName: values.deviceName,
+      wifiProvider: values.wifiProvider,
+      wifiName: values.ssid,
+      status: 'Processing',
+      requestDate: new Date().toISOString(),
+      expirationDate: expiresAt,
+    }, { merge: true });
+
+    setTimeout(() => {
       setLoading(false);
-      
       if (values.plan === 'paid') {
         router.push('/payment');
       } else {
@@ -196,7 +217,7 @@ export default function UnblockPage() {
                                 <FormLabel className={`flex flex-col p-4 rounded-xl border cursor-pointer transition-all ${field.value === 'paid' ? 'border-primary bg-primary/10' : 'border-white/10 bg-white/5 hover:border-white/20'}`}>
                                   <div className="flex justify-between items-start mb-2">
                                     <span className="font-bold text-lg">Premium Plan</span>
-                                    {field.value === 'paid' && <CheckCircle2 className="w-5 h-5 text-primary" />}
+                                    {field.value === 'paid' && <CheckCircle2 className="font-bold text-primary" />}
                                   </div>
                                   <span className="text-muted-foreground text-sm">30 days full access</span>
                                   <span className="mt-4 font-headline font-bold text-xl">₹100</span>

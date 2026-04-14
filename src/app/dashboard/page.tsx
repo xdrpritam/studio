@@ -6,51 +6,37 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Shield, Wifi, RefreshCcw, Smartphone, Zap, AlertTriangle, ArrowUpRight } from 'lucide-react';
+import { Clock, Shield, Wifi, RefreshCcw, Smartphone, Zap, AlertTriangle, ArrowUpRight, Loader2 } from 'lucide-react';
 import { TroubleshootingAssistant } from '@/components/TroubleshootingAssistant';
 import { Progress } from '@/components/ui/progress';
-
-interface UnblockRequest {
-  id: string;
-  macAddress: string;
-  deviceName: string;
-  wifiProvider: 'Jio' | 'Airtel' | 'BSNL';
-  ssid: string;
-  plan: 'trial' | 'paid';
-  status: 'Processing' | 'Unblocked';
-  createdAt: string;
-  expiresAt: string;
-}
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy, limit } from 'firebase/firestore';
 
 export default function DashboardPage() {
-  const [data, setData] = useState<UnblockRequest | null>(null);
+  const { user, isUserLoading } = useUser();
+  const db = useFirestore();
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [progress, setProgress] = useState(0);
 
-  useEffect(() => {
-    const saved = localStorage.getItem('unmac_active_request');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      setData(parsed);
+  const requestsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(
+      collection(db, 'users', user.uid, 'unblockRequests'),
+      orderBy('requestDate', 'desc'),
+      limit(1)
+    );
+  }, [user, db]);
 
-      // Simulate status transition if still processing
-      if (parsed.status === 'Processing') {
-        setTimeout(() => {
-          const updated = { ...parsed, status: 'Unblocked' };
-          setData(updated);
-          localStorage.setItem('unmac_active_request', JSON.stringify(updated));
-        }, 5000);
-      }
-    }
-  }, []);
+  const { data: requests, isLoading: isRequestsLoading } = useCollection(requestsQuery);
+  const data = requests && requests.length > 0 ? requests[0] : null;
 
   useEffect(() => {
     if (!data) return;
 
     const interval = setInterval(() => {
       const now = new Date().getTime();
-      const end = new Date(data.expiresAt).getTime();
-      const start = new Date(data.createdAt).getTime();
+      const end = new Date(data.expirationDate).getTime();
+      const start = new Date(data.requestDate).getTime();
       const distance = end - now;
 
       if (distance < 0) {
@@ -77,6 +63,29 @@ export default function DashboardPage() {
     return `${minutes}m ${seconds}s`;
   };
 
+  if (isUserLoading || isRequestsLoading) {
+    return (
+      <div className="container mx-auto px-4 py-32 flex justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-32 text-center">
+        <div className="max-w-md mx-auto space-y-6 glass-morphism p-8 rounded-2xl border-white/10">
+          <Shield className="w-16 h-16 text-primary mx-auto opacity-50" />
+          <h1 className="text-2xl font-bold">Login Required</h1>
+          <p className="text-muted-foreground">Please sign in to view your dashboard.</p>
+          <Link href="/login">
+            <Button size="lg" className="w-full neon-glow rounded-xl">Login Now</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (!data) {
     return (
       <div className="container mx-auto px-4 py-32 text-center">
@@ -95,12 +104,11 @@ export default function DashboardPage() {
   return (
     <div className="container mx-auto px-4 py-16">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Status Column */}
         <div className="lg:col-span-2 space-y-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h1 className="font-headline text-3xl font-bold">Connection Dashboard</h1>
-              <p className="text-muted-foreground">Monitoring active MAC unblock status.</p>
+              <p className="text-muted-foreground">Monitoring active MAC unblock status for {user.email}.</p>
             </div>
             <Badge variant={data.status === 'Unblocked' ? 'default' : 'secondary'} className="px-4 py-1 text-sm font-bold animate-pulse">
               {data.status.toUpperCase()}
@@ -112,7 +120,9 @@ export default function DashboardPage() {
             <CardHeader className="pb-2">
               <div className="flex justify-between items-center">
                 <CardTitle className="text-lg">Active Session</CardTitle>
-                <Badge variant="outline" className="border-white/10 capitalize">{data.plan} Plan</Badge>
+                <Badge variant="outline" className="border-white/10 capitalize">
+                  {data.subscriptionId === 'FREE_TRIAL' ? 'Trial' : 'Premium'} Plan
+                </Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -151,17 +161,15 @@ export default function DashboardPage() {
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">Network (SSID)</p>
-                  <p className="text-sm font-bold">{data.ssid}</p>
+                  <p className="text-sm font-bold">{data.wifiName}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* AI Troubleshooting Section */}
-          <TroubleshootingAssistant deviceName={data.deviceName} wifiProvider={data.wifiProvider} />
+          <TroubleshootingAssistant deviceName={data.deviceName} wifiProvider={data.wifiProvider as 'Jio' | 'Airtel' | 'BSNL'} />
         </div>
 
-        {/* Sidebar Actions */}
         <div className="space-y-6">
           <Card className="glass-morphism border-white/10">
             <CardHeader>
@@ -171,7 +179,7 @@ export default function DashboardPage() {
               <Button variant="outline" className="w-full justify-start gap-3 bg-white/5 border-white/10 h-12">
                 <RefreshCcw className="w-4 h-4 text-primary" /> Refresh Connection
               </Button>
-              {data.plan === 'trial' && (
+              {data.subscriptionId === 'FREE_TRIAL' && (
                 <Link href="/unblock">
                   <Button className="w-full justify-start gap-3 neon-glow h-12">
                     <Zap className="w-4 h-4 text-white" /> Upgrade to Premium
