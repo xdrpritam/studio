@@ -1,11 +1,9 @@
-
 {
   "entities": {
     "User": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
-      "type": "object",
       "description": "Represents a user of the UnMac service.",
+      "type": "object",
       "properties": {
         "id": { "type": "string" },
         "email": { "type": "string", "format": "email" },
@@ -14,10 +12,9 @@
       "required": ["id", "email", "createdAt"]
     },
     "UnblockRequest": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "UnblockRequest",
-      "type": "object",
       "description": "Details of a user's request to unblock a MAC address.",
+      "type": "object",
       "properties": {
         "id": { "type": "string" },
         "userId": { "type": "string" },
@@ -27,15 +24,14 @@
         "wifiName": { "type": "string" },
         "requestDate": { "type": "string", "format": "date-time" },
         "status": { "type": "string" },
-        "planType": { "type": "string" }
+        "subscriptionId": { "type": "string" }
       },
-      "required": ["id", "userId", "macAddress", "wifiProvider", "requestDate", "status", "planType"]
+      "required": ["id", "userId", "macAddress", "wifiProvider", "requestDate", "status"]
     },
     "RedeemCode": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "RedeemCode",
-      "type": "object",
       "description": "A voucher code that can be used to activate premium access.",
+      "type": "object",
       "properties": {
         "id": { "type": "string" },
         "planType": { "type": "string" },
@@ -50,31 +46,17 @@
     "providers": ["password", "google", "anonymous"]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": { "$ref": "#/backend/entities/User" },
-          "description": "Stores user profile information."
-        }
-      },
-      {
-        "path": "/users/{userId}/unblockRequests/{requestId}",
-        "definition": {
-          "entityName": "UnblockRequest",
-          "schema": { "$ref": "#/backend/entities/UnblockRequest" },
-          "description": "Stores MAC unblock requests."
-        }
-      },
-      {
-        "path": "/redeemCodes/{codeId}",
-        "definition": {
-          "entityName": "RedeemCode",
-          "schema": { "$ref": "#/backend/entities/RedeemCode" },
-          "description": "Stores active voucher codes."
-        }
-      }
-    ]
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Stores user profile information."
+    },
+    "/users/{userId}/unblockRequests/{requestId}": {
+      "schema": { "$ref": "#/entities/UnblockRequest" },
+      "description": "Stores MAC unblock requests."
+    },
+    "/redeemCodes/{codeId}": {
+      "schema": { "$ref": "#/entities/RedeemCode" },
+      "description": "Stores active voucher codes."
+    }
   }
 }
