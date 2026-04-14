@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -8,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { useUser, useAuth, useDoc, useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { useMemoFirebase } from '@/firebase';
+
+const HARDCODED_ADMIN_UID = 'UkGf3zzd3NdY0XzDhMyV1JbUi0X2';
 
 export function Navbar() {
   const { user, isUserLoading } = useUser();
@@ -28,7 +29,7 @@ export function Navbar() {
   const { data: adminData } = useDoc(adminRef);
   
   // Only calculate isAdmin and show dynamic auth UI after hydration
-  const isAdmin = mounted ? !!adminData : false;
+  const isAdmin = mounted ? (!!adminData || user?.uid === HARDCODED_ADMIN_UID) : false;
 
   return (
     <nav className="sticky top-0 z-50 border-b border-white/10 bg-background/80 backdrop-blur-md">

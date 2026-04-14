@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useUser, useDoc, useFirestore, useCollection, useMemoFirebase, useAuth } from '@/firebase';
@@ -15,6 +14,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
+
+const HARDCODED_ADMIN_UID = 'UkGf3zzd3NdY0XzDhMyV1JbUi0X2';
 
 export default function AdminPage() {
   const auth = useAuth();
@@ -34,19 +35,22 @@ export default function AdminPage() {
 
   const { data: adminData, isLoading: isAdminLoading } = useDoc(adminRef);
 
+  // Determine effective admin status
+  const hasAdminAccess = !!adminData || (user?.uid === HARDCODED_ADMIN_UID);
+
   // Fetch Inquiries - Guarded by admin check
   const inquiriesQuery = useMemoFirebase(() => {
-    if (!user || !adminData) return null;
+    if (!user || !hasAdminAccess) return null;
     return query(collection(db, 'contactInquiries'), orderBy('submissionDate', 'desc'));
-  }, [db, user, adminData]);
+  }, [db, user, hasAdminAccess]);
 
   const { data: inquiries, isLoading: isInquiriesLoading } = useCollection(inquiriesQuery);
 
   // Fetch All Unblock Requests using Collection Group - Guarded by admin check
   const allRequestsQuery = useMemoFirebase(() => {
-    if (!user || !adminData) return null;
+    if (!user || !hasAdminAccess) return null;
     return query(collectionGroup(db, 'unblockRequests'), orderBy('requestDate', 'desc'));
-  }, [db, user, adminData]);
+  }, [db, user, hasAdminAccess]);
 
   const { data: allRequests, isLoading: isRequestsLoading } = useCollection(allRequestsQuery);
 
@@ -59,12 +63,10 @@ export default function AdminPage() {
 
     setIsLoggingIn(true);
     try {
-      // Admin usernames are mapped to an internal auth format
       const email = username.includes('@') ? username : `${username}@unmac.admin`;
       await signInWithEmailAndPassword(auth, email, password);
       toast({ title: "Login Successful", description: "Admin session established." });
     } catch (error: any) {
-      // Do not use console.error here to avoid triggering the Next.js error overlay
       let errorMessage = "Invalid admin credentials.";
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
         errorMessage = "Admin user not found. Please create the user in the Firebase Console.";
@@ -88,7 +90,7 @@ export default function AdminPage() {
   }
 
   // Dashboard View (Authorized)
-  if (user && adminData) {
+  if (user && hasAdminAccess) {
     return (
       <div className="container mx-auto px-4 py-16 space-y-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

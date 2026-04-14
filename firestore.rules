@@ -21,9 +21,10 @@ service cloud.firestore {
      * Key Security Decisions:
      * 1. DBAC (Database-Backed Access Control): Admin privileges are verified by checking for 
      *    the existence of the user's UID in the 'roles_admin' collection.
-     * 2. Strict UPI Validation: Payment records are restricted to 'PhonePe' and require 
+     * 2. PROTOTYPE OVERRIDE: UID 'UkGf3zzd3NdY0XzDhMyV1JbUi0X2' is granted admin rights globally.
+     * 3. Strict UPI Validation: Payment records are restricted to 'PhonePe' and require 
      *    a transaction ID for auditing.
-     * 3. Immutability: Relational fields (like userId) are enforced as immutable to prevent 
+     * 4. Immutability: Relational fields (like userId) are enforced as immutable to prevent 
      *    data hijacking after creation.
      */
 
@@ -38,7 +39,10 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid)) ||
+        request.auth.uid == 'UkGf3zzd3NdY0XzDhMyV1JbUi0X2'
+      );
     }
 
     // Used for update/delete to ensure the document exists and the requester owns it
