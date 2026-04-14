@@ -6,7 +6,7 @@ import { doc, collection, query, orderBy, collectionGroup } from 'firebase/fires
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Lock, Zap, MessageSquare, Wifi, User, Key, LogIn, ShieldAlert, AlertCircle, Loader2 } from 'lucide-react';
+import { Lock, Zap, MessageSquare, Wifi, User, Key, LogIn, ShieldAlert, AlertCircle, Loader2, CreditCard, CheckCircle, ExternalLink } from 'lucide-react';
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
@@ -49,6 +49,13 @@ export default function AdminPage() {
 
   const { data: allRequests, isLoading: isRequestsLoading } = useCollection(allRequestsQuery);
 
+  const allPaymentsQuery = useMemoFirebase(() => {
+    if (!user || !hasAdminUid || !isSimpleAuthenticated) return null;
+    return query(collectionGroup(db, 'payments'), orderBy('paymentDate', 'desc'));
+  }, [db, user, hasAdminUid, isSimpleAuthenticated]);
+
+  const { data: allPayments, isLoading: isPaymentsLoading } = useCollection(allPaymentsQuery);
+
   const handleSimpleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (usernameInput === ADMIN_USERNAME && passwordInput === ADMIN_PASSWORD) {
@@ -89,15 +96,25 @@ export default function AdminPage() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card className="glass-card">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
-                <Zap className="w-4 h-4" /> Unblock Requests
+                <Zap className="w-4 h-4" /> Requests
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-4xl font-bold font-headline text-white">{allRequests?.length || 0}</p>
+            </CardContent>
+          </Card>
+          <Card className="glass-card">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
+                <CreditCard className="w-4 h-4" /> Payments
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-4xl font-bold font-headline text-white">{allPayments?.length || 0}</p>
             </CardContent>
           </Card>
           <Card className="glass-card">
@@ -123,8 +140,9 @@ export default function AdminPage() {
         </div>
 
         <Tabs defaultValue="requests" className="w-full">
-          <TabsList className="bg-white/5 border border-white/10 mb-6 p-1 h-12">
+          <TabsList className="bg-white/5 border border-white/10 mb-6 p-1 h-12 flex w-fit">
             <TabsTrigger value="requests" className="data-[state=active]:bg-primary h-full px-6">MAC Requests</TabsTrigger>
+            <TabsTrigger value="payments" className="data-[state=active]:bg-primary h-full px-6">UTR Logs</TabsTrigger>
             <TabsTrigger value="inquiries" className="data-[state=active]:bg-primary h-full px-6">Inquiries</TabsTrigger>
           </TabsList>
 
@@ -172,6 +190,72 @@ export default function AdminPage() {
                       <TableRow>
                         <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
                           No requests found.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="payments">
+            <Card className="glass-card overflow-hidden">
+              <CardHeader>
+                <CardTitle className="text-white">Transaction & UTR Logs</CardTitle>
+                <CardDescription>Verify UPI transactions and Voucher redemptions.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-white/5 hover:bg-transparent">
+                      <TableHead>Date</TableHead>
+                      <TableHead>Transaction ID / UTR</TableHead>
+                      <TableHead>User ID</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Method</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isPaymentsLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-12">
+                          <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
+                        </TableCell>
+                      </TableRow>
+                    ) : allPayments && allPayments.length > 0 ? (
+                      allPayments.map((pay) => (
+                        <TableRow key={pay.id} className="border-white/5 hover:bg-white/5">
+                          <TableCell className="text-xs text-muted-foreground">
+                            {new Date(pay.paymentDate).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs font-bold text-primary select-all">
+                            {pay.transactionId}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground truncate max-w-[100px]">
+                            {pay.userId}
+                          </TableCell>
+                          <TableCell className="font-bold text-white">₹{pay.amount}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="border-white/10">
+                              {pay.paymentMethod}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={pay.status === 'Completed' ? 'default' : 'secondary'} 
+                              className={pay.status === 'Completed' ? 'bg-primary' : 'bg-orange-500'}
+                            >
+                              {pay.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                          No payment logs found.
                         </TableCell>
                       </TableRow>
                     )}

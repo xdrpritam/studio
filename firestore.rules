@@ -21,6 +21,7 @@ service cloud.firestore {
     }
 
     // GLOBAL OVERRIDE: Admin UID has full access to EVERYTHING
+    // This allows collectionGroup queries for admins.
     match /{document=**} {
       allow read, write: if isAdmin();
     }

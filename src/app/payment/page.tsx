@@ -37,13 +37,13 @@ function PaymentContent() {
     });
   };
 
-  const grantPremiumAccess = (method: 'UPI' | 'VOUCHER', refId: string) => {
+  const savePaymentRecord = (method: 'UPI' | 'VOUCHER', refId: string, isInstant: boolean) => {
     if (!user) return;
 
     const paymentId = `PAY_${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
     const paymentRef = doc(db, 'users', user.uid, 'payments', paymentId);
     
-    // Save payment record
+    // Save payment record - UPI starts as 'Pending' for admin verification
     setDocumentNonBlocking(paymentRef, {
       id: paymentId,
       userId: user.uid,
@@ -51,35 +51,43 @@ function PaymentContent() {
       amount: method === 'UPI' ? 100 : 0,
       currency: 'INR',
       paymentDate: new Date().toISOString(),
-      status: 'Completed',
+      status: isInstant ? 'Completed' : 'Pending',
       paymentMethod: method,
       transactionId: refId,
       upiApp: method === 'UPI' ? 'Verified_Scanner' : 'Voucher_Redeem',
     }, { merge: true });
 
-    // Update user subscription
-    const subRef = doc(db, 'users', user.uid, 'subscriptions', 'active_subscription');
-    setDocumentNonBlocking(subRef, {
-      id: 'active_subscription',
-      userId: user.uid,
-      planType: 'PaidMonthly',
-      startDate: new Date().toISOString(),
-      endDate: new Date(Date.now() + 30 * 24 * 60 * 60000).toISOString(),
-      status: 'Active',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }, { merge: true });
+    if (isInstant) {
+      // Update user subscription immediately for vouchers
+      const subRef = doc(db, 'users', user.uid, 'subscriptions', 'active_subscription');
+      setDocumentNonBlocking(subRef, {
+        id: 'active_subscription',
+        userId: user.uid,
+        planType: 'PaidMonthly',
+        startDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60000).toISOString(),
+        status: 'Active',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
 
-    // Update the original request status to "Unblocked"
-    if (requestId) {
-      const requestRef = doc(db, 'users', user.uid, 'unblockRequests', requestId);
-      updateDocumentNonBlocking(requestRef, {
-        status: 'Unblocked',
-        unblockedAt: new Date().toISOString()
+      // Update the original request status to "Unblocked"
+      if (requestId) {
+        const requestRef = doc(db, 'users', user.uid, 'unblockRequests', requestId);
+        updateDocumentNonBlocking(requestRef, {
+          status: 'Unblocked',
+          unblockedAt: new Date().toISOString()
+        });
+      }
+      setStep('success');
+    } else {
+      // For UPI, we tell them it's submitted
+      toast({
+        title: "UTR Submitted",
+        description: "Your payment is being verified. Check dashboard for status.",
       });
+      setTimeout(() => router.push('/dashboard'), 2000);
     }
-
-    setStep('success');
   };
 
   const handleVerify = () => {
@@ -93,13 +101,10 @@ function PaymentContent() {
     }
 
     setIsValidating(true);
+    // Simulate API call to register UTR
     setTimeout(() => {
-      grantPremiumAccess('UPI', transactionId);
+      savePaymentRecord('UPI', transactionId, false);
       setIsValidating(false);
-      toast({
-        title: "Payment Verified",
-        description: "Your premium access has been activated.",
-      });
     }, 2000);
   };
 
@@ -114,11 +119,10 @@ function PaymentContent() {
     }
 
     setIsValidating(true);
-    // Mock validation logic for redeem codes
     setTimeout(() => {
       const validCodes = ['PROMO2025', 'UNMAC100', 'FREEDOM'];
       if (validCodes.includes(redeemCode.toUpperCase())) {
-        grantPremiumAccess('VOUCHER', redeemCode.toUpperCase());
+        savePaymentRecord('VOUCHER', redeemCode.toUpperCase(), true);
         toast({
           title: "Code Redeemed!",
           description: "Voucher applied successfully.",
@@ -257,7 +261,7 @@ function PaymentContent() {
                           </div>
                         ) : (
                           <div className="flex items-center gap-3">
-                            ACTIVATE ACCESS <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+                            SUBMIT UTR <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
                           </div>
                         )}
                       </Button>
