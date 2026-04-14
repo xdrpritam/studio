@@ -10,22 +10,7 @@ service cloud.firestore {
      * It prioritizes Authorization Independence by nesting user-specific data under a /users/{userId} path,
      * allowing for performant and secure checks without cross-document lookups.
      * 
-     * Data Structure:
-     * - /users/{userId}: Private profile data.
-     * - /users/{userId}/subscriptions: User-owned subscription records.
-     * - /users/{userId}/unblockRequests: User-specific MAC unblock tracking.
-     * - /users/{userId}/payments: User-specific UPI payment history (PhonePe restricted).
-     * - /roles_admin/{adminId}: Metadata-free collection where document existence grants admin rights.
-     * - /contactInquiries: Publicly writeable inquiries for support.
-     * 
-     * Key Security Decisions:
-     * 1. DBAC (Database-Backed Access Control): Admin privileges are verified by checking for 
-     *    the existence of the user's UID in the 'roles_admin' collection.
-     * 2. PROTOTYPE OVERRIDE: UID 'UkGf3zzd3NdY0XzDhMyV1JbUi0X2' is granted admin rights globally.
-     * 3. Strict UPI Validation: Payment records are restricted to 'PhonePe' and require 
-     *    a transaction ID for auditing.
-     * 4. Immutability: Relational fields (like userId) are enforced as immutable to prevent 
-     *    data hijacking after creation.
+     * Hardcoded Admin: UkGf3zzd3NdY0XzDhMyV1JbUi0X2
      */
 
     // --- Helper Functions ---
@@ -57,13 +42,6 @@ service cloud.firestore {
 
     // --- Collection Rules ---
 
-    /**
-     * @description Rules for user profile documents. Users can manage their own profile; admins can manage all.
-     * @path /users/{userId}
-     * @allow (get) If user is the owner or an admin. (create) If user is setting up their own profile.
-     * @deny (list) For non-admin users to prevent user enumeration.
-     * @principle Ownership-based write access and Admin-based oversight.
-     */
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
@@ -71,25 +49,11 @@ service cloud.firestore {
       allow update: if isExistingOwner(userId) || isExistingAdmin();
       allow delete: if isExistingAdmin();
 
-      /**
-       * @description User subscription records. Only admins can create/modify status.
-       * @path /users/{userId}/subscriptions/{subscriptionId}
-       * @allow (get/list) If user owns the parent path or is an admin.
-       * @deny (create/update) For standard users; subscriptions are managed by the system/admins.
-       * @principle Path-based authorization for listing.
-       */
       match /subscriptions/{subscriptionId} {
         allow get, list: if isOwner(userId) || isAdmin();
         allow create, update, delete: if isAdmin();
       }
 
-      /**
-       * @description MAC address unblock requests. Users create requests; admins process them.
-       * @path /users/{userId}/unblockRequests/{unblockRequestId}
-       * @allow (create) If user matches path and provides their own ID in the data.
-       * @deny (update) If user tries to change request status (Admin only).
-       * @principle Relational integrity between path and document data.
-       */
       match /unblockRequests/{unblockRequestId} {
         allow get, list: if isOwner(userId) || isAdmin();
         allow create: if isOwner(userId) && request.resource.data.userId == userId;
@@ -97,13 +61,6 @@ service cloud.firestore {
         allow delete: if isExistingAdmin();
       }
 
-      /**
-       * @description Payment records. Specifically restricted to PhonePe UPI transactions.
-       * @path /users/{userId}/payments/{paymentId}
-       * @allow (create) If user matches path, provides a transaction ID, and uses PhonePe.
-       * @deny (update) Any modification to completed payment records.
-       * @principle Specific service restriction (PhonePe) and transaction integrity.
-       */
       match /payments/{paymentId} {
         allow get, list: if isOwner(userId) || isAdmin();
         allow create: if isOwner(userId) 
@@ -115,25 +72,11 @@ service cloud.firestore {
       }
     }
 
-    /**
-     * @description Administrative role assignments. Existence of a UID here grants site-wide admin access.
-     * @path /roles_admin/{adminId}
-     * @allow (get) For the admin checking their own status.
-     * @deny (write) For everyone except via backend/console to prevent privilege escalation.
-     * @principle DBAC (Database-Backed Access Control).
-     */
     match /roles_admin/{adminId} {
       allow get: if isOwner(adminId) || isAdmin();
-      allow list, create, update, delete: if false; // Managed via Firebase Console or Admin SDK
+      allow list, create, update, delete: if false; 
     }
 
-    /**
-     * @description Public contact inquiries.
-     * @path /contactInquiries/{inquiryId}
-     * @allow (create) For any user (including anonymous) to submit a message.
-     * @deny (read) For standard users to protect submitter privacy.
-     * @principle Public-write / Admin-read segregation.
-     */
     match /contactInquiries/{inquiryId} {
       allow create: if true;
       allow get, list, update, delete: if isAdmin();
