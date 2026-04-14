@@ -21,9 +21,8 @@ service cloud.firestore {
     }
 
     // GLOBAL OVERRIDE: Admin UID has full access to everything
-    // This allows list, read, and write operations across the entire DB
     match /{document=**} {
-      allow read, write: if request.auth.uid == 'gKJKDmDMZmg8RvUT119XStZ7Xpt1' || isAdmin();
+      allow read, write: if isAdmin();
     }
 
     // --- Standard Collection Rules (for non-admins) ---
@@ -50,7 +49,6 @@ service cloud.firestore {
 
     match /contactInquiries/{inquiryId} {
       allow create: if true;
-      // isAdmin() global match handles read/write for admins
       allow list, read, update, delete: if isAdmin();
     }
     
@@ -58,8 +56,12 @@ service cloud.firestore {
       allow get: if isOwner(adminId) || isAdmin();
     }
 
-    // Explicitly allow collectionGroup queries for unblockRequests for admins
+    // Support collectionGroup queries for admins across all paths
     match /{path=**}/unblockRequests/{requestId} {
+      allow read, list: if isAdmin();
+    }
+    
+    match /{path=**}/contactInquiries/{inquiryId} {
       allow read, list: if isAdmin();
     }
   }

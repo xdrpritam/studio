@@ -1,8 +1,11 @@
 
 import Image from 'next/image';
 import { Shield, Zap, Globe, Lock } from 'lucide-react';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function AboutPage() {
+  const aboutImage = PlaceHolderImages.find(img => img.id === 'about-tech');
+
   return (
     <div className="container mx-auto px-4 py-24 space-y-24">
       <section className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
@@ -27,11 +30,12 @@ export default function AboutPage() {
         </div>
         <div className="relative aspect-video md:aspect-square rounded-3xl overflow-hidden border border-white/10 glass-morphism p-4">
           <Image 
-            src="https://picsum.photos/seed/unmac-about/600/400" 
-            alt="Data center technology" 
-            fill
-            className="object-cover rounded-2xl opacity-70"
-            data-ai-hint="server neon"
+            src={aboutImage?.imageUrl || "https://picsum.photos/seed/server-neon/600/400"} 
+            alt={aboutImage?.description || "Infrastructure visualization"} 
+            width={600}
+            height={400}
+            className="object-cover rounded-2xl opacity-70 w-full h-full"
+            data-ai-hint={aboutImage?.imageHint || "server neon"}
           />
         </div>
       </section>

@@ -5,8 +5,11 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Zap, ShieldCheck, Clock, Globe } from 'lucide-react';
 import Image from 'next/image';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function Home() {
+  const heroImage = PlaceHolderImages.find(img => img.id === 'hero-bg');
+
   return (
     <div className="relative overflow-hidden">
       {/* Background Decor */}
@@ -51,11 +54,12 @@ export default function Home() {
             <div className="absolute inset-0 bg-primary/5 rounded-3xl blur-2xl -z-10" />
             <div className="relative aspect-square md:aspect-[4/3] rounded-3xl border border-white/10 overflow-hidden glass-morphism p-4">
               <Image 
-                src="https://picsum.photos/seed/unmac-hero/1200/800" 
-                alt="Tech visualization" 
-                fill
-                className="object-cover rounded-2xl opacity-60 mix-blend-screen"
-                data-ai-hint="network technology"
+                src={heroImage?.imageUrl || "https://picsum.photos/seed/network-topology/1200/800"} 
+                alt={heroImage?.description || "Tech visualization"} 
+                width={1200}
+                height={800}
+                className="object-cover rounded-2xl opacity-60 mix-blend-screen w-full h-full"
+                data-ai-hint={heroImage?.imageHint || "network technology"}
               />
               <div className="absolute bottom-8 left-8 right-8 glass-morphism p-6 rounded-2xl border-white/20">
                 <div className="flex items-center justify-between">

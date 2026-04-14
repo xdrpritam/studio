@@ -12,6 +12,7 @@ import { useUser, useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import Image from 'next/image';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 function PaymentContent() {
   const router = useRouter();
@@ -23,6 +24,7 @@ function PaymentContent() {
   const [isValidating, setIsValidating] = useState(false);
 
   const requestId = searchParams.get('requestId');
+  const qrImage = PlaceHolderImages.find(img => img.id === 'payment-qr');
 
   const handleVerify = () => {
     // 12-digit UPI transaction ID (UTR) validation
@@ -91,11 +93,12 @@ function PaymentContent() {
               </CardTitle>
               <div className="relative w-full aspect-square bg-white rounded-2xl p-4 shadow-xl">
                 <Image 
-                  src="https://picsum.photos/seed/phonepe-qr/400/400" 
-                  alt="UPI QR Code" 
-                  fill
-                  className="object-contain p-2"
-                  data-ai-hint="QR code"
+                  src={qrImage?.imageUrl || "https://picsum.photos/seed/payment-qr/400/400"} 
+                  alt={qrImage?.description || "UPI QR Code"} 
+                  width={400}
+                  height={400}
+                  className="object-contain p-2 w-full h-full"
+                  data-ai-hint={qrImage?.imageHint || "QR code"}
                 />
               </div>
               <p className="text-sm text-muted-foreground">Scan this code using **PhonePe App** to pay ₹100</p>
