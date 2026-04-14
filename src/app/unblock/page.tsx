@@ -72,8 +72,8 @@ export default function UnblockPage() {
       ? new Date(Date.now() + 15 * 60000).toISOString() 
       : new Date(Date.now() + 30 * 24 * 60 * 60000).toISOString();
 
-    // Trials are activated immediately in the DB, Paid ones wait for payment confirmation
-    const initialStatus = values.plan === 'trial' ? 'Unblocked' : 'Processing';
+    // Trials are activated immediately. Paid ones wait for admin approval (Pending).
+    const initialStatus = values.plan === 'trial' ? 'Unblocked' : 'Pending';
 
     setDocumentNonBlocking(requestRef, {
       id: requestId,

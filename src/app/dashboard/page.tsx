@@ -101,7 +101,7 @@ export default function DashboardPage() {
     );
   }
 
-  const isPending = data.status === 'Processing';
+  const isPending = data.status === 'Pending' || data.status === 'Processing';
 
   return (
     <div className="container mx-auto px-4 py-16">
