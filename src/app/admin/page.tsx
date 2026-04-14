@@ -59,10 +59,12 @@ export default function AdminPage() {
 
     setIsLoggingIn(true);
     try {
+      // Admin usernames are mapped to an internal auth format
       const email = username.includes('@') ? username : `${username}@unmac.admin`;
       await signInWithEmailAndPassword(auth, email, password);
       toast({ title: "Login Successful", description: "Admin session established." });
     } catch (error: any) {
+      // Do not use console.error here to avoid triggering the Next.js error overlay
       let errorMessage = "Invalid admin credentials.";
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
         errorMessage = "Admin user not found. Please create the user in the Firebase Console.";
