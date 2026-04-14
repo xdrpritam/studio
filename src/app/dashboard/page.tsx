@@ -10,7 +10,7 @@ import { Clock, Shield, Wifi, RefreshCcw, Smartphone, Zap, AlertTriangle, ArrowU
 import { TroubleshootingAssistant } from '@/components/TroubleshootingAssistant';
 import { Progress } from '@/components/ui/progress';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { collection, query, orderBy, limit, where } from 'firebase/firestore';
 
 export default function DashboardPage() {
   const { user, isUserLoading } = useUser();
@@ -18,6 +18,7 @@ export default function DashboardPage() {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [progress, setProgress] = useState(0);
 
+  // 1. Fetch latest unblock request
   const requestsQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
@@ -28,15 +29,33 @@ export default function DashboardPage() {
   }, [user, db]);
 
   const { data: requests, isLoading: isRequestsLoading } = useCollection(requestsQuery);
-  const data = requests && requests.length > 0 ? requests[0] : null;
+  const requestData = requests && requests.length > 0 ? requests[0] : null;
+
+  // 2. Fetch associated payment if the request is Pending
+  const paymentsQuery = useMemoFirebase(() => {
+    if (!user || !requestData || requestData.status !== 'Pending') return null;
+    return query(
+      collection(db, 'users', user.uid, 'payments'),
+      where('requestId', '==', requestData.id),
+      limit(1)
+    );
+  }, [user, db, requestData]);
+
+  const { data: payments, isLoading: isPaymentsLoading } = useCollection(paymentsQuery);
+  const paymentData = payments && payments.length > 0 ? payments[0] : null;
+
+  // Determine effective status: If payment is Completed, treat request as Unblocked
+  const effectiveStatus = (requestData?.status === 'Pending' && paymentData?.status === 'Completed') 
+    ? 'Unblocked' 
+    : (requestData?.status || 'Unknown');
 
   useEffect(() => {
-    if (!data || data.status !== 'Unblocked') return;
+    if (!requestData || effectiveStatus !== 'Unblocked') return;
 
     const interval = setInterval(() => {
       const now = new Date().getTime();
-      const end = new Date(data.expirationDate).getTime();
-      const start = new Date(data.requestDate).getTime();
+      const end = new Date(requestData.expirationDate).getTime();
+      const start = new Date(requestData.requestDate).getTime();
       const distance = end - now;
 
       if (distance < 0) {
@@ -52,7 +71,7 @@ export default function DashboardPage() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [data]);
+  }, [requestData, effectiveStatus]);
 
   const formatTime = (ms: number) => {
     const hours = Math.floor(ms / (1000 * 60 * 60));
@@ -63,7 +82,7 @@ export default function DashboardPage() {
     return `${minutes}m ${seconds}s`;
   };
 
-  if (isUserLoading || isRequestsLoading) {
+  if (isUserLoading || isRequestsLoading || isPaymentsLoading) {
     return (
       <div className="container mx-auto px-4 py-32 flex justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -86,7 +105,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (!data) {
+  if (!requestData) {
     return (
       <div className="container mx-auto px-4 py-32 text-center">
         <div className="max-w-md mx-auto space-y-6 glass-morphism p-8 rounded-2xl border-white/10">
@@ -101,7 +120,7 @@ export default function DashboardPage() {
     );
   }
 
-  const isPending = data.status === 'Pending' || data.status === 'Processing';
+  const isPending = effectiveStatus === 'Pending';
 
   return (
     <div className="container mx-auto px-4 py-16">
@@ -113,22 +132,22 @@ export default function DashboardPage() {
               <p className="text-muted-foreground">Monitoring network status for {user.email}.</p>
             </div>
             <Badge 
-              variant={data.status === 'Unblocked' ? 'default' : 'secondary'} 
-              className={`px-4 py-1 text-sm font-bold ${data.status === 'Unblocked' ? 'bg-primary animate-pulse' : 'bg-orange-500/20 text-orange-500 border-orange-500/30'}`}
+              variant={effectiveStatus === 'Unblocked' ? 'default' : 'secondary'} 
+              className={`px-4 py-1 text-sm font-bold ${effectiveStatus === 'Unblocked' ? 'bg-primary animate-pulse' : 'bg-orange-500/20 text-orange-500 border-orange-500/30'}`}
             >
-              {data.status.toUpperCase()}
+              {effectiveStatus.toUpperCase()}
             </Badge>
           </div>
 
           <Card className="glass-morphism border-white/10 overflow-hidden">
-            <div className={`h-2 w-full ${data.status === 'Unblocked' ? 'bg-primary animate-pulse' : 'bg-orange-500'} shadow-[0_0_10px_rgba(97,85,255,0.5)]`} />
+            <div className={`h-2 w-full ${effectiveStatus === 'Unblocked' ? 'bg-primary animate-pulse' : 'bg-orange-500'} shadow-[0_0_10px_rgba(97,85,255,0.5)]`} />
             <CardHeader className="pb-2">
               <div className="flex justify-between items-center">
                 <CardTitle className="text-lg text-white">
                   {isPending ? 'Request Under Review' : 'Active Session'}
                 </CardTitle>
                 <Badge variant="outline" className="border-white/10 capitalize">
-                  {data.subscriptionId === 'FREE_TRIAL' ? 'Trial' : 'Premium'} Plan
+                  {requestData.subscriptionId === 'FREE_TRIAL' ? 'Trial' : 'Premium'} Plan
                 </Badge>
               </div>
             </CardHeader>
@@ -175,25 +194,25 @@ export default function DashboardPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-white/10">
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground font-bold">MAC Address</p>
-                  <p className="text-sm font-mono font-bold text-secondary truncate">{data.macAddress}</p>
+                  <p className="text-sm font-mono font-bold text-secondary truncate">{requestData.macAddress}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground font-bold">Device</p>
-                  <p className="text-sm font-bold text-white">{data.deviceName}</p>
+                  <p className="text-sm font-bold text-white">{requestData.deviceName}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground font-bold">Provider</p>
-                  <p className="text-sm font-bold text-white">{data.wifiProvider}</p>
+                  <p className="text-sm font-bold text-white">{requestData.wifiProvider}</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground font-bold">Network (SSID)</p>
-                  <p className="text-sm font-bold text-white">{data.wifiName}</p>
+                  <p className="text-sm font-bold text-white">{requestData.wifiName}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <TroubleshootingAssistant deviceName={data.deviceName} wifiProvider={data.wifiProvider as 'Jio' | 'Airtel' | 'BSNL'} />
+          <TroubleshootingAssistant deviceName={requestData.deviceName} wifiProvider={requestData.wifiProvider as 'Jio' | 'Airtel' | 'BSNL'} />
         </div>
 
         <div className="space-y-6">
@@ -205,7 +224,7 @@ export default function DashboardPage() {
               <Button variant="outline" className="w-full justify-start gap-3 bg-white/5 border-white/10 h-12 text-white">
                 <RefreshCcw className="w-4 h-4 text-primary" /> Refresh Connection
               </Button>
-              {data.subscriptionId === 'FREE_TRIAL' && (
+              {requestData.subscriptionId === 'FREE_TRIAL' && (
                 <Link href="/unblock">
                   <Button className="w-full justify-start gap-3 neon-glow h-12 font-bold">
                     <Zap className="w-4 h-4 text-white" /> Upgrade to Premium

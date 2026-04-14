@@ -21,8 +21,6 @@ service cloud.firestore {
     }
 
     // GLOBAL OVERRIDE: Admin UID has full access to EVERYTHING
-    // Note: Manual approval via Console follows these rules if using the Rules Playground, 
-    // but standard Console access bypasses rules for the project owner.
     match /{document=**} {
       allow read, write: if isAdmin();
     }
