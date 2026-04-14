@@ -42,7 +42,7 @@ export default function AdminPage() {
   const { data: adminData, isLoading: isAdminLoading } = useDoc(adminRef);
   const hasAdminUid = !!adminData || (user?.uid === HARDCODED_ADMIN_UID);
 
-  // Queries - Global using collectionGroup (Requires Indexes)
+  // Queries
   const inquiriesQuery = useMemoFirebase(() => {
     if (!user || !hasAdminUid || !isSimpleAuthenticated) return null;
     return query(collection(db, 'contactInquiries'), orderBy('submissionDate', 'desc'));
@@ -161,7 +161,6 @@ export default function AdminPage() {
     
     const batch = writeBatch(db);
     
-    // Seed Sample Codes
     const codes = [
       { id: 'WELCOME100', multiUse: true },
       { id: 'TRIAL2025', multiUse: false },
@@ -315,7 +314,7 @@ export default function AdminPage() {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                          No requests found. (Indexes may be pending)
+                          No requests found.
                         </TableCell>
                       </TableRow>
                     )}
@@ -477,7 +476,7 @@ export default function AdminPage() {
                       ) : (
                         <TableRow>
                           <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
-                            No active vouchers found in database.
+                            No active vouchers found.
                           </TableCell>
                         </TableRow>
                       )}
