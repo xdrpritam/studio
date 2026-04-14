@@ -308,7 +308,7 @@ export default function AdminPage() {
                 </div>
               </CardContent>
               <CardFooter className="pt-4">
-                <Button onClick={handleSimpleLogin} className="w-full h-14 text-lg font-bold bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-[0_0_20px_rgba(14,165,233,0.3)]">
+                <Button type="submit" className="w-full h-14 text-lg font-bold bg-secondary hover:bg-secondary/90 text-white rounded-xl shadow-[0_0_20px_rgba(14,165,233,0.3)]">
                   <LogIn className="mr-2 w-5 h-5" /> Unlock Dashboard
                 </Button>
               </CardFooter>

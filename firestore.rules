@@ -21,6 +21,7 @@ service cloud.firestore {
     }
 
     // GLOBAL OVERRIDE: Admin UID has full access to everything
+    // We use a recursive wildcard to catch all paths and nested documents
     match /{document=**} {
       allow read, write: if isAdmin();
     }
@@ -49,13 +50,14 @@ service cloud.firestore {
 
     match /contactInquiries/{inquiryId} {
       allow create: if true;
+      // isAdmin() global match handles read/write for admins
     }
     
     match /roles_admin/{adminId} {
       allow get: if isOwner(adminId);
     }
 
-    // Support for collectionGroup queries in Admin Dashboard
+    // Explicitly allow collectionGroup queries for unblockRequests for admins
     match /{path=**}/unblockRequests/{requestId} {
       allow read: if isAdmin();
     }
