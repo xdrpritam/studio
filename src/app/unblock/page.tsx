@@ -3,10 +3,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Shield, ArrowRight, CheckCircle2, Wifi, Tablet, Tag, CreditCard, Clock } from 'lucide-react';
+import { Shield, ArrowRight, CheckCircle2, Wifi, Tablet, Tag, CreditCard, Clock, Lock, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -30,7 +31,7 @@ const formSchema = z.object({
 
 export default function UnblockPage() {
   const router = useRouter();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const [loading, setLoading] = useState(false);
 
@@ -90,6 +91,43 @@ export default function UnblockPage() {
         router.push('/dashboard');
       }
     }, 1500);
+  }
+
+  if (isUserLoading) {
+    return (
+      <div className="container mx-auto px-4 py-32 flex justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-24 text-center">
+        <Card className="max-w-md mx-auto glass-morphism border-white/10 p-8 space-y-6">
+          <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
+            <Lock className="w-10 h-10 text-primary" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold font-headline">Authentication Required</h1>
+            <p className="text-muted-foreground">You must be logged in to submit an unblock request. This ensures your connection is securely managed.</p>
+          </div>
+          <div className="flex flex-col gap-3">
+            <Link href="/login" className="w-full">
+              <Button size="lg" className="w-full h-14 text-lg font-bold rounded-xl neon-glow">
+                Login to Continue
+              </Button>
+            </Link>
+            <Link href="/signup" className="w-full">
+              <Button variant="outline" size="lg" className="w-full h-14 text-lg font-bold rounded-xl border-white/10 bg-white/5">
+                Create an Account
+              </Button>
+            </Link>
+          </div>
+          <p className="text-xs text-muted-foreground">Joining UnMac takes less than 60 seconds.</p>
+        </Card>
+      </div>
+    );
   }
 
   return (
