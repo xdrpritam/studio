@@ -33,6 +33,7 @@ export function Navbar() {
           </span>
         </Link>
 
+        {/* Desktop Navigation */}
         <div className="hidden lg:flex items-center gap-8 text-sm font-medium">
           <Link href="/about" className="hover:text-primary transition-colors flex items-center gap-1.5">
             <Info className="w-4 h-4" /> About
@@ -53,9 +54,16 @@ export function Navbar() {
         <div className="flex items-center gap-3">
           {!isUserLoading && user ? (
             <>
+              {isAdmin && (
+                <Link href="/admin" className="lg:hidden">
+                  <Button variant="ghost" size="sm" className="flex items-center gap-2 text-secondary">
+                    <Lock className="w-4 h-4" /> <span className="hidden sm:inline">Admin</span>
+                  </Button>
+                </Link>
+              )}
               <Link href="/dashboard">
-                <Button variant="ghost" size="sm" className="hidden sm:flex items-center gap-2">
-                  <LayoutDashboard className="w-4 h-4" /> Dashboard
+                <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                  <LayoutDashboard className="w-4 h-4" /> <span className="hidden sm:inline">Dashboard</span>
                 </Button>
               </Link>
               <Button variant="outline" size="sm" onClick={() => auth.signOut()} className="border-white/10">
