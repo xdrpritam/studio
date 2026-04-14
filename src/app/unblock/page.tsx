@@ -68,7 +68,7 @@ export default function UnblockPage() {
     const requestId = `REQ_${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
     const requestRef = doc(db, 'users', user.uid, 'unblockRequests', requestId);
 
-    // Trial is set to exactly 1 hour (60 minutes)
+    // Trial is set to exactly 1 hour (3600 seconds)
     const trialDurationMs = 60 * 60 * 1000;
     const paidDurationMs = 30 * 24 * 60 * 60 * 1000;
 

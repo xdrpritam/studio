@@ -32,7 +32,7 @@ export default function Error({
         </div>
 
         <div className="space-y-4">
-          <h1 className="text-3xl md:text-5xl font-black font-headline tracking-tighter">
+          <h1 className="text-3xl md:text-5xl font-black font-headline tracking-tighter uppercase">
             {isPermissionError ? 'ACCESS DENIED' : 'SYSTEM OVERLOAD'}
           </h1>
           <p className="text-muted-foreground text-lg max-w-md mx-auto">

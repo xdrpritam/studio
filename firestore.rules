@@ -24,8 +24,7 @@ service cloud.firestore {
 
     match /redeemCodes/{codeId} {
       allow get: if isSignedIn();
-      // Allow signed-in users to update codes (needed to mark as 'isUsed')
-      // and allow admins full control
+      // Allow signed-in users to update codes (needed to mark as 'isUsed' during redemption)
       allow update: if isSignedIn();
       allow list, create, delete: if isAdmin();
     }
