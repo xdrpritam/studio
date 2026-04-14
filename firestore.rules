@@ -4,38 +4,56 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function isSignedIn() { return request.auth != null; }
     function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
-    function isAdmin() { return isSignedIn() && (request.auth.uid == 'gKJKDmDMZmg8RvUT119XStZ7Xpt1' || exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid))); }
+    function isAdmin() { 
+      return isSignedIn() && (
+        request.auth.uid == 'gKJKDmDMZmg8RvUT119XStZ7Xpt1' || 
+        exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid))
+      ); 
+    }
+
+    // Support Collection Group queries for Admin dashboard
+    // These rules allow admins to query across all subcollections of these names.
+    match /{path=**}/unblockRequests/{requestId} {
+      allow read, write: if isAdmin();
+    }
+    match /{path=**}/payments/{paymentId} {
+      allow read, write: if isAdmin();
+    }
+    match /{path=**}/subscriptions/{subscriptionId} {
+      allow read, write: if isAdmin();
+    }
 
     match /users/{userId} {
-      allow get, list, create, update, delete: if isOwner(userId) || isAdmin();
+      allow read, write: if isOwner(userId) || isAdmin();
       
       match /unblockRequests/{requestId} {
-        allow get, list, create, update, delete: if isOwner(userId) || isAdmin();
+        allow read, write: if isOwner(userId) || isAdmin();
       }
       
       match /payments/{paymentId} {
-        allow get, list, create, update, delete: if isOwner(userId) || isAdmin();
+        allow read, write: if isOwner(userId) || isAdmin();
       }
 
       match /subscriptions/{subscriptionId} {
-        allow get, list, create, update, delete: if isOwner(userId) || isAdmin();
+        allow read, write: if isOwner(userId) || isAdmin();
       }
     }
 
     match /redeemCodes/{codeId} {
       allow get: if isSignedIn();
-      // Allow signed-in users to update codes (needed to mark as 'isUsed' during redemption)
+      // Allow users to update code usage status during redemption
       allow update: if isSignedIn();
       allow list, create, delete: if isAdmin();
     }
 
     match /contactInquiries/{inquiryId} {
       allow create: if true;
-      allow get, list, update, delete: if isAdmin();
+      allow read, write: if isAdmin();
     }
 
     match /roles_admin/{uid} {
       allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
   }
 }

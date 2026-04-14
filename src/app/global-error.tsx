@@ -18,10 +18,10 @@ export default function GlobalError({
     console.error('Global Error Boundary caught:', error);
   }, [error]);
 
-  const isPermissionError = error.name === 'FirebaseError' && error.request;
+  const isPermissionError = error.name === 'FirebaseError' && (error as any).request;
 
   return (
-    <html>
+    <html lang="en">
       <body className="bg-background text-foreground antialiased min-h-screen flex items-center justify-center p-4">
         <div className="max-w-2xl w-full space-y-8 text-center">
           <div className="relative inline-block">
@@ -48,7 +48,7 @@ export default function GlobalError({
                  <span className="w-2 h-2 rounded-full bg-primary animate-pulse" /> Security Context
                </div>
                <pre className="text-[10px] font-mono text-muted-foreground overflow-auto max-h-60 p-2 leading-relaxed">
-                 {JSON.stringify(error.request, null, 2)}
+                 {JSON.stringify((error as any).request, null, 2)}
                </pre>
             </div>
           )}

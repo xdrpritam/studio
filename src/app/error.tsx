@@ -45,7 +45,7 @@ export default function Error({
         {isPermissionError && (
           <div className="p-6 bg-black/40 border border-white/10 rounded-2xl text-left space-y-4 overflow-hidden">
              <div className="flex items-center gap-2 text-xs font-bold text-primary uppercase tracking-widest">
-               <span className="w-2 h-2 rounded-full bg-primary animate-pulse" /> Debugging Payload
+               <span className="w-2 h-2 rounded-full bg-primary animate-pulse" /> Security Context
              </div>
              <pre className="text-[10px] font-mono text-muted-foreground overflow-auto max-h-60 p-2 leading-relaxed">
                {JSON.stringify((error as any).request, null, 2)}
