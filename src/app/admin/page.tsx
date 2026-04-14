@@ -1,11 +1,12 @@
+
 "use client";
 
 import { useUser, useDoc, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, orderBy, collectionGroup } from 'firebase/firestore';
+import { doc, collection, query, orderBy, collectionGroup, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Lock, Zap, MessageSquare, Wifi, User, Key, LogIn, ShieldAlert, AlertCircle, Loader2, CreditCard, CheckCircle, ExternalLink, ShieldCheck, Plus, Ticket, Trash2, RefreshCcw } from 'lucide-react';
+import { Lock, Zap, MessageSquare, Wifi, User, Key, LogIn, ShieldAlert, AlertCircle, Loader2, CreditCard, CheckCircle, ExternalLink, ShieldCheck, Plus, Ticket, Trash2, Database, RefreshCcw } from 'lucide-react';
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@ export default function AdminPage() {
   const [passwordInput, setPasswordInput] = useState('');
   const [isSimpleAuthenticated, setIsSimpleAuthenticated] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [isSeeding, setIsSeeding] = useState(false);
 
   // Redeem Code Creation State
   const [newCode, setNewCode] = useState('');
@@ -62,7 +64,6 @@ export default function AdminPage() {
 
   const { data: allPayments, isLoading: isPaymentsLoading } = useCollection(allPaymentsQuery);
 
-  // Use simple collection reference without complex ordering to avoid index requirements
   const redeemCodesQuery = useMemoFirebase(() => {
     if (!user || !hasAdminUid || !isSimpleAuthenticated) return null;
     return collection(db, 'redeemCodes');
@@ -154,6 +155,40 @@ export default function AdminPage() {
     });
   };
 
+  const handleSeedData = async () => {
+    if (!user) return;
+    setIsSeeding(true);
+    
+    const batch = writeBatch(db);
+    
+    // Seed Sample Codes
+    const codes = [
+      { id: 'WELCOME100', multiUse: true },
+      { id: 'TRIAL2025', multiUse: false },
+      { id: 'ADMIN_FREE', multiUse: true }
+    ];
+
+    codes.forEach(c => {
+      const ref = doc(db, 'redeemCodes', c.id);
+      batch.set(ref, {
+        id: c.id,
+        planType: 'PaidMonthly',
+        isUsed: false,
+        multiUse: c.multiUse,
+        createdAt: new Date().toISOString()
+      });
+    });
+
+    try {
+      await batch.commit();
+      toast({ title: "Database Seeded", description: "Sample codes and test data populated." });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Seeding Failed", description: "Check console for errors." });
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
   if (isUserLoading || (user && isAdminLoading)) {
     return (
       <div className="container mx-auto px-4 py-32 flex justify-center">
@@ -172,19 +207,25 @@ export default function AdminPage() {
             </div>
             <div>
               <h1 className="text-3xl font-bold font-headline text-white">Admin Console</h1>
-              <p className="text-muted-foreground">Logged in as <span className="text-primary font-bold">{user.email}</span></p>
+              <p className="text-muted-foreground">System Health: <span className="text-green-500 font-bold">Optimal</span></p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={() => setIsSimpleAuthenticated(false)} className="border-white/10 glass-morphism">
-            Lock Console
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleSeedData} disabled={isSeeding} className="border-white/10 glass-morphism">
+              {isSeeding ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Database className="w-4 h-4 mr-2" />}
+              Seed Sample Codes
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setIsSimpleAuthenticated(false)} className="border-white/10 glass-morphism">
+              Lock Console
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card className="glass-card">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
-                <Zap className="w-4 h-4" /> Requests
+                <Zap className="w-4 h-4" /> Total Tasks
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -194,7 +235,7 @@ export default function AdminPage() {
           <Card className="glass-card">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
-                <CreditCard className="w-4 h-4" /> Payments
+                <CreditCard className="w-4 h-4" /> UTR Logs
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -204,7 +245,7 @@ export default function AdminPage() {
           <Card className="glass-card">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
-                <Ticket className="w-4 h-4" /> Vouchers
+                <Ticket className="w-4 h-4" /> Active Codes
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -214,7 +255,7 @@ export default function AdminPage() {
           <Card className="glass-card">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
-                <Wifi className="w-4 h-4" /> Nodes
+                <Wifi className="w-4 h-4" /> Global Nodes
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -225,9 +266,9 @@ export default function AdminPage() {
 
         <Tabs defaultValue="requests" className="w-full">
           <TabsList className="bg-white/5 border border-white/10 mb-6 p-1 h-12 flex w-fit">
-            <TabsTrigger value="requests" className="data-[state=active]:bg-primary h-full px-6">MAC Requests</TabsTrigger>
-            <TabsTrigger value="payments" className="data-[state=active]:bg-primary h-full px-6">UTR Logs</TabsTrigger>
-            <TabsTrigger value="redeem" className="data-[state=active]:bg-primary h-full px-6">Redeem Codes</TabsTrigger>
+            <TabsTrigger value="requests" className="data-[state=active]:bg-primary h-full px-6">MAC Tasks</TabsTrigger>
+            <TabsTrigger value="payments" className="data-[state=active]:bg-primary h-full px-6">UTR Verification</TabsTrigger>
+            <TabsTrigger value="redeem" className="data-[state=active]:bg-primary h-full px-6">Vouchers</TabsTrigger>
             <TabsTrigger value="inquiries" className="data-[state=active]:bg-primary h-full px-6">Inquiries</TabsTrigger>
           </TabsList>
 
@@ -235,7 +276,7 @@ export default function AdminPage() {
             <Card className="glass-card overflow-hidden">
               <CardHeader>
                 <CardTitle className="text-white">Global MAC Requests</CardTitle>
-                <CardDescription>All user-submitted unblocking tasks.</CardDescription>
+                <CardDescription>All user-submitted unblocking tasks currently in the system.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -288,7 +329,7 @@ export default function AdminPage() {
             <Card className="glass-card overflow-hidden">
               <CardHeader>
                 <CardTitle className="text-white">UTR Verification Logs</CardTitle>
-                <CardDescription>Verify UPI transactions and activate premium access.</CardDescription>
+                <CardDescription>Manually verify UPI transactions and activate user access.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -350,7 +391,7 @@ export default function AdminPage() {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                          No transaction logs found.
+                          No pending UTR logs.
                         </TableCell>
                       </TableRow>
                     )}
@@ -365,7 +406,7 @@ export default function AdminPage() {
               <Card className="glass-card">
                 <CardHeader>
                   <CardTitle className="text-white">Create Voucher</CardTitle>
-                  <CardDescription>Generate new redeemable codes.</CardDescription>
+                  <CardDescription>Generate new redeemable codes for instant activation.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleCreateCode} className="space-y-4">
@@ -373,7 +414,7 @@ export default function AdminPage() {
                       <Label htmlFor="code" className="text-white">Code</Label>
                       <Input 
                         id="code"
-                        placeholder="e.g., PROMO100"
+                        placeholder="e.g., SAVE100"
                         value={newCode}
                         onChange={(e) => setNewCode(e.target.value)}
                         className="bg-background/50 border-white/10"
@@ -385,10 +426,10 @@ export default function AdminPage() {
                         checked={isMultiUse} 
                         onCheckedChange={(checked) => setIsMultiUse(!!checked)}
                       />
-                      <Label htmlFor="multi" className="text-sm font-medium text-white cursor-pointer">Multi-use code</Label>
+                      <Label htmlFor="multi" className="text-sm font-medium text-white cursor-pointer">Multi-use code (e.g. for marketing)</Label>
                     </div>
                     <Button type="submit" className="w-full neon-glow font-bold">
-                      <Plus className="w-4 h-4 mr-2" /> Generate Code
+                      <Plus className="w-4 h-4 mr-2" /> Activate Code
                     </Button>
                   </form>
                 </CardContent>
@@ -397,6 +438,7 @@ export default function AdminPage() {
               <Card className="lg:col-span-2 glass-card overflow-hidden">
                 <CardHeader>
                   <CardTitle className="text-white">Active Vouchers</CardTitle>
+                  <CardDescription>Manage codes currently available for users.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Table>
@@ -404,7 +446,7 @@ export default function AdminPage() {
                       <TableRow className="border-white/5 hover:bg-transparent">
                         <TableHead>Code</TableHead>
                         <TableHead>Type</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead>Usage</TableHead>
                         <TableHead className="text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -422,7 +464,7 @@ export default function AdminPage() {
                             <TableCell className="text-xs text-muted-foreground">{code.multiUse ? 'Multi-use' : 'Single-use'}</TableCell>
                             <TableCell>
                               <Badge variant={code.isUsed && !code.multiUse ? 'secondary' : 'default'} className={code.isUsed && !code.multiUse ? 'bg-muted' : 'bg-green-500/20 text-green-500 border-green-500/30'}>
-                                {code.isUsed && !code.multiUse ? 'Used' : 'Active'}
+                                {code.isUsed && !code.multiUse ? 'Redeemed' : 'Available'}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
@@ -435,7 +477,7 @@ export default function AdminPage() {
                       ) : (
                         <TableRow>
                           <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
-                            No active vouchers.
+                            No active vouchers found in database.
                           </TableCell>
                         </TableRow>
                       )}
@@ -450,7 +492,7 @@ export default function AdminPage() {
             <Card className="glass-card overflow-hidden">
               <CardHeader>
                 <CardTitle className="text-white">Contact Inquiries</CardTitle>
-                <CardDescription>Messages from users.</CardDescription>
+                <CardDescription>Direct messages from users regarding technical issues.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -505,10 +547,10 @@ export default function AdminPage() {
               {(!user || !hasAdminUid) ? <ShieldAlert className="w-8 h-8 text-destructive" /> : <Lock className="w-8 h-8 text-primary" />}
             </div>
             <CardTitle className="text-3xl font-bold font-headline text-white">
-              {(!user || !hasAdminUid) ? "Access Denied" : "Admin Login"}
+              {(!user || !hasAdminUid) ? "Access Restricted" : "Secure Auth"}
             </CardTitle>
             <CardDescription>
-              {(!user || !hasAdminUid) ? "Your UID is not authorized" : "Enter prototype credentials"}
+              {(!user || !hasAdminUid) ? "Unauthorized session detected" : "Enter management credentials"}
             </CardDescription>
           </CardHeader>
           
@@ -516,21 +558,21 @@ export default function AdminPage() {
             <CardContent className="space-y-6">
               <div className="p-6 bg-destructive/10 border border-destructive/20 rounded-2xl space-y-4">
                 <p className="text-xs font-bold text-destructive uppercase tracking-widest flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4" /> Authorization Error
+                  <AlertCircle className="w-4 h-4" /> System Guard Active
                 </p>
                 <div className="space-y-2">
-                  <p className="text-[10px] text-muted-foreground uppercase font-bold">Session UID</p>
+                  <p className="text-[10px] text-muted-foreground uppercase font-bold">Session Identity</p>
                   <code className="block p-3 bg-black/40 rounded-xl text-xs break-all border border-white/5 font-mono select-all text-destructive">
                     {user?.uid || "NOT_LOGGED_IN"}
                   </code>
                 </div>
                 {!user ? (
                   <Link href="/login" className="block w-full">
-                    <Button className="w-full h-12 font-bold neon-glow">Sign In with Authorized Account</Button>
+                    <Button className="w-full h-12 font-bold neon-glow">Sign In with Admin Account</Button>
                   </Link>
                 ) : (
                   <p className="text-xs leading-relaxed text-muted-foreground text-center">
-                    This account is not in the allowed administrators list.
+                    This account lacks administrative priority. Contact infrastructure support.
                   </p>
                 )}
               </div>
@@ -539,20 +581,20 @@ export default function AdminPage() {
             <form onSubmit={handleSimpleLogin}>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="username" className="text-white">Username</Label>
+                  <Label htmlFor="username" className="text-white">Admin ID</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input 
                       id="username"
                       value={usernameInput}
                       onChange={(e) => setUsernameInput(e.target.value)}
-                      placeholder="Admin username"
+                      placeholder="Enter admin ID"
                       className="pl-10 bg-background/50 border-white/10 h-12 text-white"
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-white">Password</Label>
+                  <Label htmlFor="password" className="text-white">Security Key</Label>
                   <div className="relative">
                     <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input 
@@ -578,3 +620,4 @@ export default function AdminPage() {
     </div>
   );
 }
+

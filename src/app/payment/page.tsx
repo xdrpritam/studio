@@ -1,9 +1,10 @@
+
 "use client";
 
 import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CheckCircle2, ShieldCheck, ArrowRight, Loader2, Smartphone, AlertTriangle, CreditCard, Copy, Info, Ticket, Zap } from 'lucide-react';
+import { CheckCircle2, ShieldCheck, ArrowRight, Loader2, Smartphone, AlertTriangle, CreditCard, Copy, Info, Ticket, Zap, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -83,8 +84,8 @@ function PaymentContent() {
     } else {
       // For UPI, we tell them it's submitted but NOT yet active
       toast({
-        title: "UTR Submitted",
-        description: "Your payment is being verified by admin. Access will be granted shortly.",
+        title: "Submission Successful",
+        description: "UTR log saved. Access will be activated after admin verification.",
       });
       setTimeout(() => router.push('/dashboard'), 2500);
     }
@@ -94,8 +95,8 @@ function PaymentContent() {
     if (transactionId.length !== 12 || !/^\d+$/.test(transactionId)) {
       toast({
         variant: "destructive",
-        title: "Invalid UTR",
-        description: "Please enter a valid 12-digit UPI transaction number.",
+        title: "Invalid UTR Format",
+        description: "Please enter the 12-digit transaction ID from your payment app.",
       });
       return;
     }
@@ -105,7 +106,7 @@ function PaymentContent() {
     setTimeout(() => {
       savePaymentRecord('UPI', transactionId, false);
       setIsValidating(false);
-    }, 2000);
+    }, 1500);
   };
 
   const handleRedeem = async () => {
@@ -113,15 +114,14 @@ function PaymentContent() {
     if (!codeToRedeem || codeToRedeem.length < 3) {
       toast({
         variant: "destructive",
-        title: "Invalid Code",
-        description: "Please enter a valid redeem code.",
+        title: "Voucher Error",
+        description: "Please enter a valid activation code.",
       });
       return;
     }
 
     setIsValidating(true);
     try {
-      // Direct lookup by document ID for efficiency
       const codeRef = doc(db, 'redeemCodes', codeToRedeem);
       const codeSnap = await getDoc(codeRef);
 
@@ -132,7 +132,7 @@ function PaymentContent() {
           toast({
             variant: "destructive",
             title: "Code Expired",
-            description: "This code has already been used.",
+            description: "This voucher has already been redeemed.",
           });
         } else {
           // Mark code as used if not multi-use
@@ -142,22 +142,22 @@ function PaymentContent() {
           
           savePaymentRecord('VOUCHER', codeToRedeem, true);
           toast({
-            title: "Code Redeemed!",
-            description: "Voucher applied successfully. Access granted.",
+            title: "Voucher Activated",
+            description: "Premium access granted instantly.",
           });
         }
       } else {
         toast({
           variant: "destructive",
-          title: "Invalid Code",
-          description: "This voucher code does not exist.",
+          title: "Code Not Found",
+          description: "This voucher code is invalid or does not exist.",
         });
       }
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Redemption Failed",
-        description: "An error occurred. Please try again later.",
+        title: "Redemption Error",
+        description: "Failed to verify code. Please try again.",
       });
     } finally {
       setIsValidating(false);
@@ -211,6 +211,10 @@ function PaymentContent() {
                         <Copy className="w-4 h-4" />
                       </Button>
                     </div>
+                    <div className="flex items-center gap-2 p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 text-[10px] font-bold text-orange-500 uppercase tracking-widest leading-tight">
+                      <Info className="w-4 h-4 shrink-0" />
+                      Wait for 5-30 mins after UTR submission for activation.
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -219,19 +223,19 @@ function PaymentContent() {
             <div className="lg:col-span-7 space-y-8">
               <div className="space-y-4">
                 <h1 className="text-4xl lg:text-6xl font-black font-headline tracking-tighter leading-none">
-                  ACTIVATE <br />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary neon-text">ACCESS</span>
+                  SECURE <br />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary neon-text">ACTIVATION</span>
                 </h1>
-                <p className="text-lg text-muted-foreground max-w-md">Choose your preferred method to unlock high-speed network access.</p>
+                <p className="text-lg text-muted-foreground max-w-md">Submit your transaction details or use a voucher code to unlock high-speed network access.</p>
               </div>
 
               <Tabs defaultValue="upi" className="w-full">
                 <TabsList className="grid w-full grid-cols-2 bg-white/5 border border-white/10 h-14 p-1 rounded-2xl">
                   <TabsTrigger value="upi" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold gap-2">
-                    <Smartphone className="w-4 h-4" /> UPI Payment
+                    <Smartphone className="w-4 h-4" /> UPI Log
                   </TabsTrigger>
                   <TabsTrigger value="redeem" className="rounded-xl data-[state=active]:bg-secondary data-[state=active]:text-black font-bold gap-2">
-                    <Ticket className="w-4 h-4" /> Redeem Code
+                    <Ticket className="w-4 h-4" /> Voucher
                   </TabsTrigger>
                 </TabsList>
 
@@ -241,8 +245,8 @@ function PaymentContent() {
                       <div className="space-y-4">
                         <div className="flex justify-between items-end">
                           <div className="space-y-1">
-                            <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary">Transaction Reference (UTR)</label>
-                            <p className="text-xs text-muted-foreground">Enter the 12-digit number from your app</p>
+                            <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary">UTR ID (12 Digits)</label>
+                            <p className="text-xs text-muted-foreground">Enter the ID from your UPI application</p>
                           </div>
                         </div>
                         <div className="relative">
@@ -262,7 +266,7 @@ function PaymentContent() {
                         disabled={isValidating || transactionId.length !== 12} 
                         className="w-full h-20 text-xl font-black rounded-2xl neon-glow uppercase tracking-[0.2em]"
                       >
-                        {isValidating ? <Loader2 className="w-6 h-6 animate-spin" /> : "SUBMIT FOR REVIEW"}
+                        {isValidating ? <Loader2 className="w-6 h-6 animate-spin" /> : "SUBMIT UTR FOR LOG"}
                       </Button>
                     </div>
                   </Card>
@@ -273,8 +277,8 @@ function PaymentContent() {
                     <div className="space-y-8">
                       <div className="space-y-4">
                         <div className="space-y-1">
-                          <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-secondary">Voucher Code</label>
-                          <p className="text-xs text-muted-foreground">Instant activation with a valid voucher.</p>
+                          <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-secondary">Voucher Key</label>
+                          <p className="text-xs text-muted-foreground">Instant activation via premium voucher.</p>
                         </div>
                         <div className="relative">
                           <Ticket className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-secondary/50" />
@@ -282,7 +286,7 @@ function PaymentContent() {
                             placeholder="UNMAC-XXXX-XXXX" 
                             value={redeemCode}
                             onChange={(e) => setRedeemCode(e.target.value)}
-                            className="bg-black/40 border-white/10 h-20 pl-16 font-mono text-center text-2xl tracking-[0.1em] focus:border-secondary focus:ring-1 focus:ring-secondary transition-all rounded-2xl"
+                            className="bg-black/40 border-white/10 h-20 pl-16 font-mono text-center text-2xl tracking-[0.1em] focus:border-secondary focus:ring-1 focus:ring-secondary transition-all rounded-2xl uppercase"
                           />
                         </div>
                       </div>
@@ -292,7 +296,7 @@ function PaymentContent() {
                         disabled={isValidating || !redeemCode} 
                         className="w-full h-20 text-xl font-black rounded-2xl bg-secondary text-black hover:bg-secondary/90 uppercase tracking-[0.2em]"
                       >
-                        {isValidating ? <Loader2 className="w-6 h-6 animate-spin" /> : "ACTIVATE INSTANTLY"}
+                        {isValidating ? <Loader2 className="w-6 h-6 animate-spin" /> : "REDEEM VOUCHER"}
                       </Button>
                     </div>
                   </Card>
@@ -309,13 +313,13 @@ function PaymentContent() {
                 </div>
                 <div className="space-y-4">
                   <h1 className="text-5xl lg:text-7xl font-black font-headline tracking-tighter uppercase italic leading-none">
-                    ACTIVATED <span className="text-primary">!</span>
+                    SUCCESS <span className="text-primary">!</span>
                   </h1>
-                  <p className="text-lg text-muted-foreground font-medium uppercase tracking-widest">Premium Service is Now Live</p>
+                  <p className="text-lg text-muted-foreground font-medium uppercase tracking-widest">Infrastructure Access Granted</p>
                 </div>
                 <Link href="/dashboard" className="block pt-6">
                   <Button size="lg" className="w-full h-20 neon-glow rounded-2xl font-black text-2xl uppercase tracking-[0.3em]">
-                    DASHBOARD <ArrowRight className="ml-3 w-8 h-8" />
+                    GOTO DASHBOARD <ArrowRight className="ml-3 w-8 h-8" />
                   </Button>
                 </Link>
               </CardContent>
