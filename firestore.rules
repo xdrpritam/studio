@@ -15,15 +15,28 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() && (
-        exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid)) ||
-        request.auth.uid == 'gKJKDmDMZmg8RvUT119XStZ7Xpt1'
+        request.auth.uid == 'gKJKDmDMZmg8RvUT119XStZ7Xpt1' ||
+        exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid))
       );
     }
 
     // GLOBAL OVERRIDE: Admin UID has full access to EVERYTHING
-    // This allows collectionGroup queries for admins.
     match /{document=**} {
       allow read, write: if isAdmin();
+    }
+
+    // --- Collection Group Rules (Needed for Admin Queries) ---
+    
+    match /{path=**}/unblockRequests/{requestId} {
+      allow list: if isAdmin();
+    }
+    
+    match /{path=**}/payments/{paymentId} {
+      allow list: if isAdmin();
+    }
+    
+    match /{path=**}/contactInquiries/{inquiryId} {
+      allow list, read, update, delete: if isAdmin();
     }
 
     // --- Standard Collection Rules ---
@@ -50,7 +63,6 @@ service cloud.firestore {
 
     match /contactInquiries/{inquiryId} {
       allow create: if true;
-      allow list, read, update, delete: if isAdmin();
     }
     
     match /roles_admin/{adminId} {

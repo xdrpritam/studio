@@ -43,10 +43,11 @@ function PaymentContent() {
     const paymentId = `PAY_${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
     const paymentRef = doc(db, 'users', user.uid, 'payments', paymentId);
     
-    // Save payment record - UPI starts as 'Pending' for admin verification
+    // Save payment record
     setDocumentNonBlocking(paymentRef, {
       id: paymentId,
       userId: user.uid,
+      requestId: requestId, // Link the request for admin verification
       subscriptionId: 'SUB_PREMIUM_MONTHLY',
       amount: method === 'UPI' ? 100 : 0,
       currency: 'INR',
@@ -58,7 +59,7 @@ function PaymentContent() {
     }, { merge: true });
 
     if (isInstant) {
-      // Update user subscription immediately for vouchers
+      // Update user subscription immediately ONLY for vouchers
       const subRef = doc(db, 'users', user.uid, 'subscriptions', 'active_subscription');
       setDocumentNonBlocking(subRef, {
         id: 'active_subscription',
@@ -81,12 +82,12 @@ function PaymentContent() {
       }
       setStep('success');
     } else {
-      // For UPI, we tell them it's submitted
+      // For UPI, we tell them it's submitted but NOT yet active
       toast({
         title: "UTR Submitted",
-        description: "Your payment is being verified. Check dashboard for status.",
+        description: "Your payment is being verified by admin. Access will be granted shortly.",
       });
-      setTimeout(() => router.push('/dashboard'), 2000);
+      setTimeout(() => router.push('/dashboard'), 2500);
     }
   };
 
@@ -101,7 +102,7 @@ function PaymentContent() {
     }
 
     setIsValidating(true);
-    // Simulate API call to register UTR
+    // Simulate UTR submission
     setTimeout(() => {
       savePaymentRecord('UPI', transactionId, false);
       setIsValidating(false);
@@ -125,7 +126,7 @@ function PaymentContent() {
         savePaymentRecord('VOUCHER', redeemCode.toUpperCase(), true);
         toast({
           title: "Code Redeemed!",
-          description: "Voucher applied successfully.",
+          description: "Voucher applied successfully. Access granted.",
         });
       } else {
         toast({
@@ -143,7 +144,6 @@ function PaymentContent() {
       <div className="w-full max-w-6xl">
         {step === 'paying' ? (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-            {/* Left Column: QR Scanner Section */}
             <div className="lg:col-span-5 space-y-6">
               <Card className="glass-morphism border-white/10 overflow-hidden shadow-2xl relative">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-secondary to-primary animate-pulse" />
@@ -186,7 +186,6 @@ function PaymentContent() {
                         <Copy className="w-4 h-4" />
                       </Button>
                     </div>
-
                     <div className="flex items-center justify-center gap-6 opacity-30 grayscale hover:grayscale-0 hover:opacity-100 transition-all cursor-default py-2">
                        <span className="font-black italic text-lg tracking-tighter">BHIM</span>
                        <span className="font-black italic text-lg tracking-tighter">UPI</span>
@@ -199,12 +198,11 @@ function PaymentContent() {
               <div className="flex items-center gap-3 p-4 rounded-2xl bg-secondary/5 border border-secondary/10">
                 <Info className="w-5 h-5 text-secondary shrink-0" />
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Plan Details: <span className="text-white font-bold">Premium Unblock (30 Days)</span>. Your MAC will be whitelisted across all nodes globally.
+                  Plan Details: <span className="text-white font-bold">Premium Unblock (30 Days)</span>. Activation requires manual UTR verification by our team.
                 </p>
               </div>
             </div>
 
-            {/* Right Column: Interaction Tabs Section */}
             <div className="lg:col-span-7 space-y-8">
               <div className="space-y-4">
                 <h1 className="text-4xl lg:text-6xl font-black font-headline tracking-tighter leading-none">
@@ -237,7 +235,6 @@ function PaymentContent() {
                             {transactionId.length} / 12 DIGITS
                           </span>
                         </div>
-                        
                         <div className="relative">
                           <CreditCard className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-primary/50" />
                           <Input 
@@ -257,11 +254,11 @@ function PaymentContent() {
                       >
                         {isValidating ? (
                           <div className="flex items-center gap-3">
-                            <Loader2 className="w-6 h-6 animate-spin" /> VERIFYING...
+                            <Loader2 className="w-6 h-6 animate-spin" /> SUBMITTING...
                           </div>
                         ) : (
                           <div className="flex items-center gap-3">
-                            SUBMIT UTR <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
+                            SUBMIT FOR REVIEW <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
                           </div>
                         )}
                       </Button>
@@ -275,9 +272,8 @@ function PaymentContent() {
                       <div className="space-y-4">
                         <div className="space-y-1">
                           <label className="text-[10px] font-bold uppercase tracking-[0.3em] text-secondary">Voucher Code</label>
-                          <p className="text-xs text-muted-foreground">No payment? Enter your redemption code here.</p>
+                          <p className="text-xs text-muted-foreground">Instant activation with a valid voucher.</p>
                         </div>
-                        
                         <div className="relative">
                           <Ticket className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-secondary/50" />
                           <Input 
@@ -296,21 +292,14 @@ function PaymentContent() {
                       >
                         {isValidating ? (
                           <div className="flex items-center gap-3">
-                            <Loader2 className="w-6 h-6 animate-spin" /> REDEEMING...
+                            <Loader2 className="w-6 h-6 animate-spin" /> ACTIVATING...
                           </div>
                         ) : (
                           <div className="flex items-center gap-3">
-                            REDEEM CODE <Zap className="w-6 h-6 group-hover:scale-125 transition-transform" />
+                            ACTIVATE INSTANTLY <Zap className="w-6 h-6 group-hover:scale-125 transition-transform" />
                           </div>
                         )}
                       </Button>
-
-                      <div className="p-4 rounded-xl bg-secondary/5 border border-secondary/20 flex gap-3 items-center">
-                        <AlertTriangle className="w-5 h-5 text-secondary shrink-0" />
-                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
-                          Don't have a code? Contact support for offline payment options.
-                        </p>
-                      </div>
                     </div>
                   </Card>
                 </TabsContent>
@@ -318,8 +307,8 @@ function PaymentContent() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
                 {[
-                  { icon: ShieldCheck, title: "24/7 Security", desc: "All transactions are monitored by our global node network." },
-                  { icon: Zap, title: "Instant Sync", desc: "Access is updated across all WiFi providers in real-time." },
+                  { icon: ShieldCheck, title: "Secure Tunnel", desc: "Your MAC is isolated and protected during the activation process." },
+                  { icon: Zap, title: "Admin Review", desc: "UTR payments are manually reviewed for maximum network safety." },
                 ].map((item, i) => (
                   <div key={i} className="p-5 rounded-2xl glass-card border-white/5 flex gap-4 items-start">
                     <item.icon className="w-6 h-6 text-secondary shrink-0" />
@@ -343,14 +332,12 @@ function PaymentContent() {
                     <CheckCircle2 className="w-16 h-16 text-white" />
                   </div>
                 </div>
-                
                 <div className="space-y-4">
                   <h1 className="text-5xl lg:text-7xl font-black font-headline tracking-tighter uppercase italic leading-none">
-                    SUCCESS <span className="text-primary">!</span>
+                    ACTIVATED <span className="text-primary">!</span>
                   </h1>
-                  <p className="text-lg text-muted-foreground font-medium uppercase tracking-widest">Premium Node Access Activated</p>
+                  <p className="text-lg text-muted-foreground font-medium uppercase tracking-widest">Premium Service is Now Live</p>
                 </div>
-                
                 <Link href="/dashboard" className="block pt-6">
                   <Button size="lg" className="w-full h-20 neon-glow rounded-2xl font-black text-2xl uppercase tracking-[0.3em] transition-transform hover:scale-105">
                     DASHBOARD <ArrowRight className="ml-3 w-8 h-8" />

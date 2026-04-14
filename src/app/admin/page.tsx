@@ -6,13 +6,14 @@ import { doc, collection, query, orderBy, collectionGroup } from 'firebase/fires
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Lock, Zap, MessageSquare, Wifi, User, Key, LogIn, ShieldAlert, AlertCircle, Loader2, CreditCard, CheckCircle, ExternalLink } from 'lucide-react';
+import { Lock, Zap, MessageSquare, Wifi, User, Key, LogIn, ShieldAlert, AlertCircle, Loader2, CreditCard, CheckCircle, ExternalLink, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
+import { updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import Link from 'next/link';
 
 const HARDCODED_ADMIN_UID = 'gKJKDmDMZmg8RvUT119XStZ7Xpt1';
@@ -26,6 +27,7 @@ export default function AdminPage() {
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [isSimpleAuthenticated, setIsSimpleAuthenticated] = useState(false);
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   const adminRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -67,6 +69,49 @@ export default function AdminPage() {
         title: "Login Failed", 
         description: "Invalid credentials." 
       });
+    }
+  };
+
+  const handleApprovePayment = async (payment: any) => {
+    if (!payment.userId || !payment.id) return;
+    setProcessingId(payment.id);
+
+    try {
+      const paymentRef = doc(db, 'users', payment.userId, 'payments', payment.id);
+      const subRef = doc(db, 'users', payment.userId, 'subscriptions', 'active_subscription');
+      
+      // 1. Mark Payment as Completed
+      updateDocumentNonBlocking(paymentRef, { status: 'Completed' });
+      
+      // 2. Activate Subscription
+      setDocumentNonBlocking(subRef, {
+        id: 'active_subscription',
+        userId: payment.userId,
+        planType: 'PaidMonthly',
+        startDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60000).toISOString(),
+        status: 'Active',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }, { merge: true });
+
+      // 3. Update the associated Unblock Request if it exists
+      if (payment.requestId) {
+        const requestRef = doc(db, 'users', payment.userId, 'unblockRequests', payment.requestId);
+        updateDocumentNonBlocking(requestRef, {
+          status: 'Unblocked',
+          unblockedAt: new Date().toISOString()
+        });
+      }
+
+      toast({
+        title: "Transaction Approved",
+        description: `Access granted for user ${payment.userId.substring(0, 8)}...`,
+      });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to approve payment." });
+    } finally {
+      setProcessingId(null);
     }
   };
 
@@ -203,18 +248,18 @@ export default function AdminPage() {
             <Card className="glass-card overflow-hidden">
               <CardHeader>
                 <CardTitle className="text-white">Transaction & UTR Logs</CardTitle>
-                <CardDescription>Verify UPI transactions and Voucher redemptions.</CardDescription>
+                <CardDescription>Verify UPI transactions and activate user access.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow className="border-white/5 hover:bg-transparent">
                       <TableHead>Date</TableHead>
-                      <TableHead>Transaction ID / UTR</TableHead>
-                      <TableHead>User ID</TableHead>
+                      <TableHead>UTR / Transaction ID</TableHead>
                       <TableHead>Amount</TableHead>
                       <TableHead>Method</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -233,12 +278,9 @@ export default function AdminPage() {
                           <TableCell className="font-mono text-xs font-bold text-primary select-all">
                             {pay.transactionId}
                           </TableCell>
-                          <TableCell className="text-xs text-muted-foreground truncate max-w-[100px]">
-                            {pay.userId}
-                          </TableCell>
                           <TableCell className="font-bold text-white">₹{pay.amount}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="border-white/10">
+                            <Badge variant="outline" className="border-white/10 uppercase text-[10px]">
                               {pay.paymentMethod}
                             </Badge>
                           </TableCell>
@@ -249,6 +291,19 @@ export default function AdminPage() {
                             >
                               {pay.status}
                             </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {pay.status === 'Pending' && (
+                              <Button 
+                                size="sm" 
+                                className="h-8 neon-glow bg-primary text-white font-bold px-4"
+                                onClick={() => handleApprovePayment(pay)}
+                                disabled={processingId === pay.id}
+                              >
+                                {processingId === pay.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3 mr-1.5" />}
+                                Approve
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))
