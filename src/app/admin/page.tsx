@@ -76,43 +76,38 @@ export default function AdminPage() {
     if (!payment.userId || !payment.id) return;
     setProcessingId(payment.id);
 
-    try {
-      const paymentRef = doc(db, 'users', payment.userId, 'payments', payment.id);
-      const subRef = doc(db, 'users', payment.userId, 'subscriptions', 'active_subscription');
-      
-      // 1. Mark Payment as Completed
-      updateDocumentNonBlocking(paymentRef, { status: 'Completed' });
-      
-      // 2. Activate Subscription
-      setDocumentNonBlocking(subRef, {
-        id: 'active_subscription',
-        userId: payment.userId,
-        planType: 'PaidMonthly',
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60000).toISOString(),
-        status: 'Active',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }, { merge: true });
+    const paymentRef = doc(db, 'users', payment.userId, 'payments', payment.id);
+    const subRef = doc(db, 'users', payment.userId, 'subscriptions', 'active_subscription');
+    
+    // 1. Mark Payment as Completed
+    updateDocumentNonBlocking(paymentRef, { status: 'Completed' });
+    
+    // 2. Activate Subscription
+    setDocumentNonBlocking(subRef, {
+      id: 'active_subscription',
+      userId: payment.userId,
+      planType: 'PaidMonthly',
+      startDate: new Date().toISOString(),
+      endDate: new Date(Date.now() + 30 * 24 * 60 * 60000).toISOString(),
+      status: 'Active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }, { merge: true });
 
-      // 3. Update the associated Unblock Request if it exists
-      if (payment.requestId) {
-        const requestRef = doc(db, 'users', payment.userId, 'unblockRequests', payment.requestId);
-        updateDocumentNonBlocking(requestRef, {
-          status: 'Unblocked',
-          unblockedAt: new Date().toISOString()
-        });
-      }
-
-      toast({
-        title: "Transaction Approved",
-        description: `Access granted for user ${payment.userId.substring(0, 8)}...`,
+    // 3. Update the associated Unblock Request if it exists
+    if (payment.requestId) {
+      const requestRef = doc(db, 'users', payment.userId, 'unblockRequests', payment.requestId);
+      updateDocumentNonBlocking(requestRef, {
+        status: 'Unblocked',
+        unblockedAt: new Date().toISOString()
       });
-    } catch (err) {
-      toast({ variant: "destructive", title: "Error", description: "Failed to approve payment." });
-    } finally {
-      setProcessingId(null);
     }
+
+    toast({
+      title: "Transaction Approved",
+      description: "Access activated for the user.",
+    });
+    setProcessingId(null);
   };
 
   if (isUserLoading || (user && isAdminLoading)) {
@@ -225,7 +220,7 @@ export default function AdminPage() {
                           <TableCell className="font-medium text-white">{req.deviceName}</TableCell>
                           <TableCell className="text-white">{req.wifiProvider}</TableCell>
                           <TableCell>
-                            <Badge variant={req.status === 'Unblocked' ? 'default' : 'secondary'} className={req.status === 'Unblocked' ? 'bg-primary' : 'bg-muted'}>
+                            <Badge variant={req.status === 'Unblocked' ? 'default' : 'secondary'} className={req.status === 'Unblocked' ? 'bg-primary' : 'bg-orange-500'}>
                               {req.status}
                             </Badge>
                           </TableCell>
@@ -247,15 +242,15 @@ export default function AdminPage() {
           <TabsContent value="payments">
             <Card className="glass-card overflow-hidden">
               <CardHeader>
-                <CardTitle className="text-white">Transaction & UTR Logs</CardTitle>
-                <CardDescription>Verify UPI transactions and activate user access.</CardDescription>
+                <CardTitle className="text-white">UTR Verification Logs</CardTitle>
+                <CardDescription>Verify UPI transactions and activate premium access.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow className="border-white/5 hover:bg-transparent">
                       <TableHead>Date</TableHead>
-                      <TableHead>UTR / Transaction ID</TableHead>
+                      <TableHead>Transaction ID (UTR)</TableHead>
                       <TableHead>Amount</TableHead>
                       <TableHead>Method</TableHead>
                       <TableHead>Status</TableHead>
@@ -310,7 +305,7 @@ export default function AdminPage() {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                          No payment logs found.
+                          No transaction logs found.
                         </TableCell>
                       </TableRow>
                     )}
@@ -324,7 +319,7 @@ export default function AdminPage() {
             <Card className="glass-card overflow-hidden">
               <CardHeader>
                 <CardTitle className="text-white">Contact Inquiries</CardTitle>
-                <CardDescription>Messages from the public.</CardDescription>
+                <CardDescription>Messages from users.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>

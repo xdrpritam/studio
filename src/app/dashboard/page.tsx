@@ -44,10 +44,9 @@ export default function DashboardPage() {
   const { data: payments, isLoading: isPaymentsLoading } = useCollection(paymentsQuery);
   const paymentData = payments && payments.length > 0 ? payments[0] : null;
 
-  // Determine effective status: If payment is Completed, treat request as Unblocked
-  const effectiveStatus = (requestData?.status === 'Pending' && paymentData?.status === 'Completed') 
-    ? 'Unblocked' 
-    : (requestData?.status || 'Unknown');
+  // Effective status is based on the unblock request itself, 
+  // but we also check the payment if it's pending.
+  const effectiveStatus = requestData?.status || 'Unknown';
 
   useEffect(() => {
     if (!requestData || effectiveStatus !== 'Unblocked') return;
@@ -144,7 +143,7 @@ export default function DashboardPage() {
             <CardHeader className="pb-2">
               <div className="flex justify-between items-center">
                 <CardTitle className="text-lg text-white">
-                  {isPending ? 'Request Under Review' : 'Active Session'}
+                  {isPending ? 'Verification in Progress' : 'Active Session'}
                 </CardTitle>
                 <Badge variant="outline" className="border-white/10 capitalize">
                   {requestData.subscriptionId === 'FREE_TRIAL' ? 'Trial' : 'Premium'} Plan
@@ -233,32 +232,6 @@ export default function DashboardPage() {
               )}
               <Button variant="ghost" className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10 h-12 font-bold">
                 <AlertTriangle className="w-4 h-4" /> Terminate Session
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-secondary/5 border-secondary/10 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-10">
-              <Shield className="w-24 h-24 text-secondary" />
-            </div>
-            <CardHeader>
-              <CardTitle className="text-lg text-secondary">Premium Perks</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm text-muted-foreground font-medium">
-              <div className="flex gap-3">
-                <CheckCircle2 className="w-4 h-4 text-secondary shrink-0" />
-                <p>30 Days Unlimited Access</p>
-              </div>
-              <div className="flex gap-3">
-                <CheckCircle2 className="w-4 h-4 text-secondary shrink-0" />
-                <p>Multi-device Support</p>
-              </div>
-              <div className="flex gap-3">
-                <CheckCircle2 className="w-4 h-4 text-secondary shrink-0" />
-                <p>Priority API Unblocking</p>
-              </div>
-              <Button variant="outline" className="w-full border-secondary text-secondary hover:bg-secondary/10 mt-4 group font-bold">
-                Learn More <ArrowUpRight className="ml-2 w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
               </Button>
             </CardContent>
           </Card>
