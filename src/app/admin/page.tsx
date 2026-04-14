@@ -2,7 +2,7 @@
 "use client";
 
 import { useUser, useDoc, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, orderBy, collectionGroup, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, query, orderBy, collectionGroup, writeBatch, serverTimestamp, getDocs } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +43,7 @@ export default function AdminPage() {
   const { data: adminData, isLoading: isAdminLoading } = useDoc(adminRef);
   const hasAdminUid = !!adminData || (user?.uid === HARDCODED_ADMIN_UID);
 
+  // Queries - Global using collectionGroup (Requires Indexes)
   const inquiriesQuery = useMemoFirebase(() => {
     if (!user || !hasAdminUid || !isSimpleAuthenticated) return null;
     return query(collection(db, 'contactInquiries'), orderBy('submissionDate', 'desc'));
@@ -315,7 +316,7 @@ export default function AdminPage() {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                          No requests found.
+                          No requests found. (Indexes may be pending)
                         </TableCell>
                       </TableRow>
                     )}
@@ -391,7 +392,7 @@ export default function AdminPage() {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                          No pending UTR logs.
+                          No pending UTR logs found.
                         </TableCell>
                       </TableRow>
                     )}

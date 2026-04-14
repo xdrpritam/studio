@@ -31,9 +31,9 @@ export default function DashboardPage() {
   const { data: requests, isLoading: isRequestsLoading } = useCollection(requestsQuery);
   const requestData = requests && requests.length > 0 ? requests[0] : null;
 
-  // 2. Fetch associated payment if the request is Pending
+  // 2. Fetch associated payment
   const paymentsQuery = useMemoFirebase(() => {
-    if (!user || !requestData || requestData.status !== 'Pending') return null;
+    if (!user || !requestData) return null;
     return query(
       collection(db, 'users', user.uid, 'payments'),
       where('requestId', '==', requestData.id),
@@ -44,8 +44,9 @@ export default function DashboardPage() {
   const { data: payments, isLoading: isPaymentsLoading } = useCollection(paymentsQuery);
   const paymentData = payments && payments.length > 0 ? payments[0] : null;
 
-  // Effective status is based on the unblock request itself.
-  const effectiveStatus = requestData?.status || 'Unknown';
+  // Manual Console Override: If payment is marked "Completed" in console, treat request as "Unblocked"
+  const isManuallyApproved = requestData?.status === 'Pending' && paymentData?.status === 'Completed';
+  const effectiveStatus = isManuallyApproved ? 'Unblocked' : (requestData?.status || 'Unknown');
 
   useEffect(() => {
     if (!requestData || effectiveStatus !== 'Unblocked') return;
