@@ -2,20 +2,20 @@
   "placeholderImages": [
     {
       "id": "hero-bg",
-      "description": "Abstract network topology with glowing nodes and data pathways",
-      "imageUrl": "https://picsum.photos/seed/network-topology/1200/800",
-      "imageHint": "network topology"
+      "description": "Abstract high-speed network topology with glowing data nodes and fiber optic pathways",
+      "imageUrl": "https://picsum.photos/seed/network-cyber-high/1200/800",
+      "imageHint": "network technology"
     },
     {
       "id": "about-tech",
-      "description": "High-tech server rack with blue neon connectivity indicators",
-      "imageUrl": "https://picsum.photos/seed/server-infrastructure/600/400",
+      "description": "Modern data center server infrastructure with neon lighting",
+      "imageUrl": "https://picsum.photos/seed/server-infrastructure-v2/600/400",
       "imageHint": "server neon"
     },
     {
       "id": "payment-qr",
-      "description": "Paytm UPI QR Code for secure payments",
-      "imageUrl": "https://picsum.photos/seed/paytm-qr/400/400",
+      "description": "Authentic Paytm UPI QR Code for secure transaction processing",
+      "imageUrl": "https://picsum.photos/seed/qr-scanner-secure/400/400",
       "imageHint": "Paytm QR"
     }
   ]
