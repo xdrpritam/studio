@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useUser, useDoc, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
@@ -63,7 +62,7 @@ export default function AdminPage() {
 
   const { data: allPayments, isLoading: isPaymentsLoading } = useCollection(allPaymentsQuery);
 
-  // Removed orderBy to ensure it works even without composite indexes for now
+  // Use simple collection reference without complex ordering to avoid index requirements
   const redeemCodesQuery = useMemoFirebase(() => {
     if (!user || !hasAdminUid || !isSimpleAuthenticated) return null;
     return collection(db, 'redeemCodes');
@@ -85,7 +84,7 @@ export default function AdminPage() {
     }
   };
 
-  const handleApprovePayment = async (payment: any) => {
+  const handleApprovePayment = (payment: any) => {
     if (!payment.userId || !payment.id) return;
     setProcessingId(payment.id);
 

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, Suspense } from 'react';
@@ -102,7 +101,7 @@ function PaymentContent() {
     }
 
     setIsValidating(true);
-    // Simulate UTR submission
+    // Simulate UTR submission logic
     setTimeout(() => {
       savePaymentRecord('UPI', transactionId, false);
       setIsValidating(false);
@@ -122,6 +121,7 @@ function PaymentContent() {
 
     setIsValidating(true);
     try {
+      // Direct lookup by document ID for efficiency
       const codeRef = doc(db, 'redeemCodes', codeToRedeem);
       const codeSnap = await getDoc(codeRef);
 
