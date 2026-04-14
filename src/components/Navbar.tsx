@@ -44,8 +44,8 @@ export function Navbar() {
           <Link href="/contact" className="hover:text-primary transition-colors flex items-center gap-1.5">
             <PhoneCall className="w-4 h-4" /> Contact
           </Link>
-          {isAdmin && (
-            <Link href="/admin" className="text-secondary hover:text-secondary/80 transition-colors flex items-center gap-1.5 font-bold">
+          {user && (
+            <Link href="/admin" className={`${isAdmin ? 'text-secondary' : 'text-muted-foreground'} hover:text-primary transition-colors flex items-center gap-1.5 font-bold`}>
               <Lock className="w-4 h-4" /> Admin
             </Link>
           )}
@@ -54,13 +54,6 @@ export function Navbar() {
         <div className="flex items-center gap-3">
           {!isUserLoading && user ? (
             <>
-              {isAdmin && (
-                <Link href="/admin" className="lg:hidden">
-                  <Button variant="ghost" size="sm" className="flex items-center gap-2 text-secondary">
-                    <Lock className="w-4 h-4" /> <span className="hidden sm:inline">Admin</span>
-                  </Button>
-                </Link>
-              )}
               <Link href="/dashboard">
                 <Button variant="ghost" size="sm" className="flex items-center gap-2">
                   <LayoutDashboard className="w-4 h-4" /> <span className="hidden sm:inline">Dashboard</span>
