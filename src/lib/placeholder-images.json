@@ -1,3 +1,16 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-bg",
+      "description": "Futuristic network connections and glowing data streams",
+      "imageUrl": "https://picsum.photos/seed/unmac-hero/1200/800",
+      "imageHint": "network technology"
+    },
+    {
+      "id": "about-tech",
+      "description": "Close up of a server or network equipment with neon lights",
+      "imageUrl": "https://picsum.photos/seed/unmac-about/600/400",
+      "imageHint": "server neon"
+    }
+  ]
 }
