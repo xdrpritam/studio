@@ -61,23 +61,6 @@ export default function Home() {
                 className="object-cover rounded-2xl opacity-60 mix-blend-screen w-full h-full"
                 data-ai-hint={heroImage?.imageHint || "network technology"}
               />
-              <div className="absolute bottom-8 left-8 right-8 glass-morphism p-6 rounded-2xl border-white/20">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                      <ShieldCheck className="w-6 h-6 text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold">Status: Processing</h4>
-                      <p className="text-xs text-muted-foreground">Secure connection established</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold font-code text-secondary">00:14:59</p>
-                    <p className="text-xs text-muted-foreground">Remaining</p>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
