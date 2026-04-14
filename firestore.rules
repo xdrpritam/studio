@@ -21,7 +21,6 @@ service cloud.firestore {
     }
 
     // GLOBAL OVERRIDE: Admin UID has full access to everything
-    // We check the hardcoded UID directly here for absolute priority
     match /{document=**} {
       allow read, write: if request.auth.uid == 'gKJKDmDMZmg8RvUT119XStZ7Xpt1' || isAdmin();
     }
@@ -57,7 +56,7 @@ service cloud.firestore {
       allow get: if isOwner(adminId) || isAdmin();
     }
 
-    // Explicitly allow collectionGroup queries for unblockRequests
+    // Explicitly allow collectionGroup queries for admin
     match /{path=**}/unblockRequests/{requestId} {
       allow read, list: if isAdmin();
     }
