@@ -27,17 +27,19 @@ export default function AdminPage() {
 
   const { data: adminData, isLoading: isAdminLoading } = useDoc(adminRef);
 
-  // Fetch Inquiries
+  // Fetch Inquiries - Guarded by admin check
   const inquiriesQuery = useMemoFirebase(() => {
+    if (!user || isAdminLoading || !adminData) return null;
     return query(collection(db, 'contactInquiries'), orderBy('submissionDate', 'desc'));
-  }, [db]);
+  }, [db, user, isAdminLoading, adminData]);
 
   const { data: inquiries, isLoading: isInquiriesLoading } = useCollection(inquiriesQuery);
 
-  // Fetch All Unblock Requests using Collection Group
+  // Fetch All Unblock Requests using Collection Group - Guarded by admin check
   const allRequestsQuery = useMemoFirebase(() => {
+    if (!user || isAdminLoading || !adminData) return null;
     return query(collectionGroup(db, 'unblockRequests'), orderBy('requestDate', 'desc'));
-  }, [db]);
+  }, [db, user, isAdminLoading, adminData]);
 
   const { data: allRequests, isLoading: isRequestsLoading } = useCollection(allRequestsQuery);
 
