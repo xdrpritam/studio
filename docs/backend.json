@@ -1,11 +1,10 @@
-
 {
   "entities": {
     "User": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "Represents a user account in the UnMac application, storing profile information and roles. Assumes an external authentication system for passwords.",
+      "description": "Represents a user of the UnMac service. Assumes an external authentication system for credentials, so no sensitive authentication data is stored here.",
       "properties": {
         "id": {
           "type": "string",
@@ -13,89 +12,18 @@
         },
         "email": {
           "type": "string",
-          "description": "The user's unique email address, used for communication and login (via external authentication).",
+          "description": "Email address of the user, used for identification.",
           "format": "email"
-        },
-        "firstName": {
-          "type": "string",
-          "description": "The first name of the user."
-        },
-        "lastName": {
-          "type": "string",
-          "description": "The last name of the user."
-        },
-        "role": {
-          "type": "string",
-          "description": "The role assigned to the user within the system (e.g., 'user', 'admin')."
         },
         "createdAt": {
           "type": "string",
-          "description": "Timestamp when the user account was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the user account information was last updated.",
+          "description": "Timestamp indicating when the user's record was created.",
           "format": "date-time"
         }
       },
       "required": [
         "id",
         "email",
-        "role",
-        "createdAt"
-      ]
-    },
-    "Subscription": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Subscription",
-      "type": "object",
-      "description": "Manages a user's subscription plan, including free trials and paid memberships, determining service access duration.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Subscription entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the User associated with this subscription. (Relationship: User 1:N Subscription)"
-        },
-        "planType": {
-          "type": "string",
-          "description": "The type of plan (e.g., 'FreeTrial', 'PaidMonthly')."
-        },
-        "startDate": {
-          "type": "string",
-          "description": "The date and time when the subscription became active.",
-          "format": "date-time"
-        },
-        "endDate": {
-          "type": "string",
-          "description": "The date and time when the subscription is set to expire.",
-          "format": "date-time"
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the subscription (e.g., 'Active', 'Expired', 'Canceled')."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the subscription record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the subscription record was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "planType",
-        "startDate",
-        "endDate",
-        "status",
         "createdAt"
       ]
     },
@@ -103,7 +31,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "UnblockRequest",
       "type": "object",
-      "description": "Stores details for a user's request to unblock a specific MAC address on a chosen WiFi network.",
+      "description": "Details of a user's request to unblock a MAC address, including device and network information, and plan selection.",
       "properties": {
         "id": {
           "type": "string",
@@ -113,128 +41,132 @@
           "type": "string",
           "description": "Reference to the User who made this unblock request. (Relationship: User 1:N UnblockRequest)"
         },
-        "subscriptionId": {
-          "type": "string",
-          "description": "Reference to the Subscription under which this unblock request was made. (Relationship: Subscription 1:N UnblockRequest)"
-        },
         "macAddress": {
           "type": "string",
-          "description": "The MAC address requested to be unblocked (e.g., '00:1A:2B:3C:4D:5E')."
+          "description": "The MAC address provided by the user for unblocking."
         },
         "deviceName": {
           "type": "string",
-          "description": "The name of the device associated with the MAC address (e.g., 'My Laptop')."
+          "description": "The name of the device associated with the MAC address, provided by the user."
         },
         "wifiProvider": {
           "type": "string",
-          "description": "The WiFi service provider (e.g., 'Jio', 'Airtel', 'BSNL')."
+          "description": "The WiFi service provider selected by the user (e.g., 'Jio', 'Airtel', 'BSNL')."
         },
         "wifiName": {
           "type": "string",
-          "description": "The SSID (name) of the WiFi network (e.g., 'HomeWiFi')."
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the unblock request (e.g., 'Processing', 'Unblocked', 'Failed', 'Expired')."
+          "description": "The SSID (Service Set Identifier) of the WiFi network."
         },
         "requestDate": {
           "type": "string",
-          "description": "Timestamp when the unblock request was submitted.",
-          "format": "date-time"
-        },
-        "unblockedAt": {
-          "type": "string",
-          "description": "Optional timestamp when the MAC address was successfully unblocked.",
-          "format": "date-time"
-        },
-        "expirationDate": {
-          "type": "string",
-          "description": "The date and time when the unblock service for this request is set to expire, based on the user's plan.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "subscriptionId",
-        "macAddress",
-        "wifiProvider",
-        "wifiName",
-        "status",
-        "requestDate",
-        "expirationDate"
-      ]
-    },
-    "Payment": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Payment",
-      "type": "object",
-      "description": "Records details of payment transactions made by users, primarily for subscription plans, including UPI specifics.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Payment entity."
-        },
-        "subscriptionId": {
-          "type": "string",
-          "description": "Reference to the Subscription this payment is for. (Relationship: Subscription 1:N Payment)"
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the User who made this payment. (Relationship: User 1:N Payment)"
-        },
-        "amount": {
-          "type": "number",
-          "description": "The monetary amount of the payment."
-        },
-        "currency": {
-          "type": "string",
-          "description": "The currency of the payment (e.g., 'INR')."
-        },
-        "paymentDate": {
-          "type": "string",
-          "description": "The date and time the payment was made.",
+          "description": "Timestamp indicating when the unblock request was submitted.",
           "format": "date-time"
         },
         "status": {
           "type": "string",
-          "description": "The status of the payment (e.g., 'Pending', 'Completed', 'Failed', 'Refunded')."
+          "description": "Current status of the unblock request (e.g., 'Pending', 'Processing', 'Unblocked', 'Failed', 'Cancelled')."
         },
-        "paymentMethod": {
+        "planType": {
           "type": "string",
-          "description": "The method used for payment (e.g., 'UPI')."
+          "description": "The type of plan selected for this request ('Trial' or 'Paid')."
         },
-        "transactionId": {
+        "trialStartTime": {
           "type": "string",
-          "description": "The unique transaction ID provided by the payment system, required for UPI validation."
+          "description": "The start timestamp for a free trial unblock request. Applicable only when 'planType' is 'Trial'.",
+          "format": "date-time"
         },
-        "upiApp": {
+        "trialEndTime": {
           "type": "string",
-          "description": "The UPI application used for payment (e.g., 'PhonePe')."
+          "description": "The end timestamp for a free trial unblock request. Applicable only when 'planType' is 'Trial'.",
+          "format": "date-time"
         },
-        "providerReferenceId": {
+        "subscriptionId": {
           "type": "string",
-          "description": "An optional reference ID from the payment gateway provider for external tracking."
+          "description": "Reference to the active paid subscription that enables this unblock request. Applicable only when 'planType' is 'Paid'. (Relationship: Subscription 1:N UnblockRequest)"
+        },
+        "unblockedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the MAC address was successfully unblocked.",
+          "format": "date-time"
+        },
+        "troubleshootingNotes": {
+          "type": "string",
+          "description": "Notes or suggestions generated by the Smart Troubleshooting Assistant or backend related to this request."
         }
       },
       "required": [
         "id",
-        "subscriptionId",
         "userId",
-        "amount",
-        "currency",
-        "paymentDate",
+        "macAddress",
+        "wifiProvider",
+        "requestDate",
         "status",
-        "paymentMethod",
-        "transactionId",
-        "upiApp"
+        "planType"
+      ]
+    },
+    "Subscription": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Subscription",
+      "type": "object",
+      "description": "Represents a user's paid subscription to the UnMac service, granting access to premium features.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Subscription entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User who owns this subscription. (Relationship: User 1:N Subscription)"
+        },
+        "planType": {
+          "type": "string",
+          "description": "The type of paid plan (e.g., 'Monthly')."
+        },
+        "startDate": {
+          "type": "string",
+          "description": "The date when the subscription became active.",
+          "format": "date-time"
+        },
+        "endDate": {
+          "type": "string",
+          "description": "The date when the subscription is set to expire.",
+          "format": "date-time"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "A boolean indicating whether the subscription is currently active."
+        },
+        "paymentTransactionId": {
+          "type": "string",
+          "description": "Reference ID from the external payment gateway for the transaction associated with this subscription."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the subscription record was initially created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp of the last update made to the subscription record.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "planType",
+        "startDate",
+        "endDate",
+        "isActive",
+        "paymentTransactionId",
+        "createdAt"
       ]
     },
     "ContactInquiry": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "ContactInquiry",
       "type": "object",
-      "description": "Stores messages submitted by users through the website's contact form, facilitating communication and support.",
+      "description": "Stores inquiries submitted by users through the website's contact form.",
       "properties": {
         "id": {
           "type": "string",
@@ -246,72 +178,40 @@
         },
         "email": {
           "type": "string",
-          "description": "The email address for responding to the inquiry.",
+          "description": "The email address of the inquirer, for response purposes.",
           "format": "email"
         },
         "subject": {
           "type": "string",
-          "description": "The subject line of the inquiry message."
+          "description": "The subject line or topic of the inquiry."
         },
         "message": {
           "type": "string",
-          "description": "The full content of the inquiry message."
+          "description": "The full message or content of the inquiry."
         },
-        "submissionDate": {
+        "submittedAt": {
           "type": "string",
-          "description": "Timestamp when the inquiry was submitted.",
+          "description": "Timestamp indicating when the inquiry was submitted.",
           "format": "date-time"
         },
         "status": {
           "type": "string",
-          "description": "The processing status of the inquiry (e.g., 'New', 'InProgress', 'Resolved')."
+          "description": "Current status of the inquiry (e.g., 'New', 'Responded', 'Closed')."
         }
       },
       "required": [
         "id",
-        "name",
         "email",
-        "subject",
         "message",
-        "submissionDate",
+        "submittedAt",
         "status"
       ]
-    },
-    "RedeemCode": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "RedeemCode",
-      "type": "object",
-      "description": "Stores redeemable voucher codes for premium access activation.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "The actual redeem code (e.g., 'PROMO100')."
-        },
-        "planType": {
-          "type": "string",
-          "description": "The plan type this code activates (e.g., 'PaidMonthly')."
-        },
-        "isUsed": {
-          "type": "boolean",
-          "description": "Whether the code has been redeemed (for single-use codes)."
-        },
-        "multiUse": {
-          "type": "boolean",
-          "description": "Whether the code can be used multiple times."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      "required": ["id", "planType", "isUsed", "multiUse", "createdAt"]
     }
   },
   "auth": {
     "providers": [
       "password",
-      "anonymous",
-      "google.com"
+      "anonymous"
     ]
   },
   "firestore": {
@@ -323,27 +223,13 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores individual user profiles."
-        }
-      },
-      {
-        "path": "/roles_admin/{adminId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Admin privileges marker."
-        }
-      },
-      {
-        "path": "/users/{userId}/subscriptions/{subscriptionId}",
-        "definition": {
-          "entityName": "Subscription",
-          "schema": {
-            "$ref": "#/backend/entities/Subscription"
-          },
-          "description": "User subscriptions."
+          "description": "Stores user profile information, accessible only by the owning user. This path-based ownership is fundamental for secure authorization.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user, matching request.auth.uid."
+            }
+          ]
         }
       },
       {
@@ -353,17 +239,37 @@
           "schema": {
             "$ref": "#/backend/entities/UnblockRequest"
           },
-          "description": "User unblock requests."
+          "description": "Stores details of a user's MAC address unblock requests. This subcollection structure ensures that requests are owned by and accessible only to the user specified in the path. Includes denormalized 'userId' in path for authorization independence, making the document's internal 'userId' field not strictly necessary for ownership checks in rules.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user who made the unblock request, matching request.auth.uid."
+            },
+            {
+              "name": "unblockRequestId",
+              "description": "The unique ID of the unblock request."
+            }
+          ]
         }
       },
       {
-        "path": "/users/{userId}/payments/{paymentId}",
+        "path": "/users/{userId}/subscriptions/{subscriptionId}",
         "definition": {
-          "entityName": "Payment",
+          "entityName": "Subscription",
           "schema": {
-            "$ref": "#/backend/entities/Payment"
+            "$ref": "#/backend/entities/Subscription"
           },
-          "description": "User payments."
+          "description": "Stores a user's paid subscriptions. This subcollection structure ensures that subscriptions are owned by and accessible only to the user specified in the path. Includes denormalized 'userId' in path for authorization independence, making the document's internal 'userId' field not strictly necessary for ownership checks in rules.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the user who owns the subscription, matching request.auth.uid."
+            },
+            {
+              "name": "subscriptionId",
+              "description": "The unique ID of the subscription."
+            }
+          ]
         }
       },
       {
@@ -373,19 +279,16 @@
           "schema": {
             "$ref": "#/backend/entities/ContactInquiry"
           },
-          "description": "Public inquiries."
-        }
-      },
-      {
-        "path": "/redeemCodes/{codeId}",
-        "definition": {
-          "entityName": "RedeemCode",
-          "schema": {
-            "$ref": "#/backend/entities/RedeemCode"
-          },
-          "description": "Storage for redeemable vouchers."
+          "description": "Stores inquiries submitted through the contact form. Designed for public creation (anonymous users) and restricted read/update access (e.g., to admin roles). This is a top-level collection as it's not strictly user-owned, ensuring structural segregation.",
+          "params": [
+            {
+              "name": "inquiryId",
+              "description": "The unique ID of the contact inquiry."
+            }
+          ]
         }
       }
-    ]
+    ],
+    "reasoning": "The Firestore data structure for UnMac prioritizes security, scalability, and debuggability by strictly adhering to the core design principles. The chosen structure leverages path-based ownership and structural segregation to achieve authorization independence and support query-aware rules (QAPs).\n\n**Authorization Independence (Denormalization Strategy):**\nThe primary strategy for achieving Authorization Independence is through **path-based ownership and structural segregation**. This eliminates the need for expensive and complex `get()` calls in Firestore security rules, which are critical for robust atomic operations (transactions/batches) and simplified debugging.\n*   **For User-owned data (`UnblockRequest`, `Subscription`):** These entities are structured as subcollections directly under the `users` collection: `/users/{userId}/unblockRequests/{unblockRequestId}` and `/users/{userId}/subscriptions/{subscriptionId}`. The `userId` is an explicit part of the document's path. In Firestore security rules, `request.auth.uid` can be directly compared against the `{userId}` wildcard in the path (e.g., `match /users/{userId}/... { allow read, write: if userId == request.auth.uid; }`). This design inherently denormalizes the authorization context to the path itself, eliminating the need to read the `userId` field from the document's content for authorization checks. The `userId` field still exists within the `UnblockRequest` and `Subscription` documents for data integrity and querying purposes, but it is not the *primary* source of authorization for ownership-based rules.\n\n**QAPs (Rules are not Filters):**\n*   **Path-Based Ownership for Secure Lists:** By structuring `UnblockRequest` and `Subscription` under `/users/{userId}/...`, `list` operations are inherently secure and do not require rules to act as filters. When a user requests to `list` documents in `/users/{myUserId}/unblockRequests`, Firestore security rules evaluate the request against the path segment `{myUserId}`. If `myUserId` matches `request.auth.uid`, the rule grants access. If a malicious user attempts to list documents in `/users/{otherUserId}/unblockRequests`, the rule `userId == request.auth.uid` will fail, preventing access before any data is returned. This ensures that the database only returns documents the user is authorized to see, preventing client-side filtering vulnerabilities.\n*   **Structural Segregation for `ContactInquiry`:** The `ContactInquiry` collection is a top-level collection (`/contactInquiries/{inquiryId}`). This segregation is crucial because these inquiries are not 'user-owned' in the same way `UnblockRequest` or `Subscription` are. They are a global collection for support. This separation ensures that a simple `list` rule for `/contactInquiries` for administrators does not accidentally expose sensitive inquiries to regular users, nor does it require complex filtering logic within rules. It enables secure public creation and restricted management access.\n\nThis structure provides a robust foundation for secure and maintainable Firestore security rules for the UnMac application by ensuring authorization logic is explicit, efficient, and deeply integrated into the data's hierarchical organization."
   }
 }
