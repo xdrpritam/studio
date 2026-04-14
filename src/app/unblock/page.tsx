@@ -46,6 +46,14 @@ export default function UnblockPage() {
     },
   });
 
+  const formatMacAddress = (value: string) => {
+    // Remove all non-hex characters and limit to 12 chars
+    const hexOnly = value.replace(/[^0-9A-Fa-f]/g, '').slice(0, 12);
+    // Group by 2s and join with colons
+    const groups = hexOnly.match(/.{1,2}/g);
+    return groups ? groups.join(':').toUpperCase() : hexOnly.toUpperCase();
+  };
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!user) {
       toast({
@@ -154,9 +162,17 @@ export default function UnblockPage() {
                               <Shield className="w-4 h-4 text-primary" /> MAC Address
                             </FormLabel>
                             <FormControl>
-                              <Input placeholder="00:1A:2B:3C:4D:5E" {...field} className="bg-background/50 border-white/10" />
+                              <Input 
+                                placeholder="00:1A:2B:3C:4D:5E" 
+                                {...field} 
+                                onChange={(e) => {
+                                  const formatted = formatMacAddress(e.target.value);
+                                  field.onChange(formatted);
+                                }}
+                                className="bg-background/50 border-white/10 font-mono" 
+                              />
                             </FormControl>
-                            <FormDescription className="text-xs">Physical address of your device.</FormDescription>
+                            <FormDescription className="text-xs">Physical address of your device (Auto-formatted).</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
