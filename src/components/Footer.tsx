@@ -9,8 +9,8 @@ export function Footer() {
           <div className="md:col-span-5 space-y-6">
             <Link href="/" className="flex items-center gap-2">
               <Shield className="w-8 h-8 text-primary" />
-              <span className="font-headline text-3xl font-black tracking-tighter uppercase italic">
-                <span className="text-primary">Un</span><span className="text-white">Mac</span>
+              <span className="font-headline text-2xl font-bold tracking-tight">
+                <span className="text-white">Un</span><span className="text-primary">Mac</span>
               </span>
             </Link>
             <p className="text-muted-foreground text-sm max-w-sm leading-relaxed">

@@ -42,7 +42,7 @@ export function Navbar() {
       <div className="container mx-auto px-4 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group relative z-[1001]" onClick={() => setIsMobileMenuOpen(false)}>
           <Shield className="w-7 h-7 md:w-8 md:h-8 text-primary group-hover:scale-110 transition-transform" />
-          <span className="font-headline text-xl md:text-2xl font-black tracking-tighter uppercase italic">
+          <span className="font-headline text-xl md:text-2xl font-bold tracking-tight">
             <span className="text-white">Un</span><span className="text-primary neon-text">Mac</span>
           </span>
         </Link>
