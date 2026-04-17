@@ -2,8 +2,8 @@
 "use client";
 
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, orderBy, collectionGroup, writeBatch, where } from 'firebase/firestore';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { doc, collection, query, orderBy, collectionGroup } from 'firebase/firestore';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -12,20 +12,15 @@ import {
   Trash2, 
   Loader2, 
   ShieldCheck, 
-  ShieldAlert, 
   AlertCircle, 
-  Info, 
-  BarChart3, 
   Users, 
   CreditCard, 
-  Voucher, 
   MessageSquare,
   ChevronRight,
   Search,
   CheckCircle2,
   XCircle,
-  Mail,
-  Calendar
+  Timer
 } from 'lucide-react';
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -68,16 +63,18 @@ export default function AdminPage() {
 
   const { data: inquiries, isLoading: isInquiriesLoading } = useCollection(inquiriesQuery);
 
+  // Removed orderBy from collectionGroup to avoid index requirement
   const allRequestsQuery = useMemoFirebase(() => {
     if (!user || !isSimpleAuthenticated) return null;
-    return query(collectionGroup(db, 'unblockRequests'), orderBy('requestDate', 'desc'));
+    return collectionGroup(db, 'unblockRequests');
   }, [db, user, isSimpleAuthenticated]);
 
   const { data: allRequests, isLoading: isRequestsLoading } = useCollection(allRequestsQuery);
 
+  // Removed orderBy from collectionGroup to avoid index requirement
   const allPaymentsQuery = useMemoFirebase(() => {
     if (!user || !isSimpleAuthenticated) return null;
-    return query(collectionGroup(db, 'payments'), orderBy('paymentDate', 'desc'));
+    return collectionGroup(db, 'payments');
   }, [db, user, isSimpleAuthenticated]);
 
   const { data: allPayments, isLoading: isPaymentsLoading } = useCollection(allPaymentsQuery);
@@ -209,7 +206,7 @@ export default function AdminPage() {
           {[
             { label: "Users", value: users?.length || 0, icon: Users, color: "text-primary" },
             { label: "Network Tasks", value: allRequests?.length || 0, icon: Database, color: "text-secondary" },
-            { label: "UTR Verified", value: allPayments?.filter(p => p.status === 'Completed').length || 0, icon: CreditCard, color: "text-primary" },
+            { label: "UTR Pending", value: allPayments?.filter(p => p.status === 'Pending').length || 0, icon: Timer, color: "text-orange-500" },
             { label: "Vouchers", value: redeemCodes?.length || 0, icon: ShieldCheck, color: "text-secondary" },
             { label: "Inquiries", value: inquiries?.length || 0, icon: MessageSquare, color: "text-primary" }
           ].map((stat, i) => (
@@ -227,14 +224,70 @@ export default function AdminPage() {
           ))}
         </div>
 
-        <Tabs defaultValue="tasks" className="w-full">
+        <Tabs defaultValue="verification" className="w-full">
           <TabsList className="bg-white/5 border border-white/10 p-1 mb-8 h-14 rounded-2xl overflow-x-auto justify-start">
-            <TabsTrigger value="users" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-6">User Registry</TabsTrigger>
-            <TabsTrigger value="tasks" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-6">Network Tasks</TabsTrigger>
             <TabsTrigger value="verification" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-6">UTR Verification</TabsTrigger>
+            <TabsTrigger value="tasks" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-6">Network Tasks</TabsTrigger>
+            <TabsTrigger value="users" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-6">User Registry</TabsTrigger>
             <TabsTrigger value="vouchers" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-6">Voucher Mgmt</TabsTrigger>
             <TabsTrigger value="inquiries" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-6">User Support</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="verification">
+            <Card className="glass-card overflow-hidden">
+              <div className="p-6 border-b border-white/5 flex flex-col gap-2">
+                <CardTitle className="text-xl font-bold">UTR Approval Queue</CardTitle>
+                <CardDescription>Manually verify transaction IDs from payment apps. Items appear here immediately after user submission.</CardDescription>
+              </div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-white/5">
+                    <TableRow className="border-white/5">
+                      <TableHead className="font-bold text-xs uppercase">Date</TableHead>
+                      <TableHead className="font-bold text-xs uppercase">UTR Number</TableHead>
+                      <TableHead className="font-bold text-xs uppercase">Amount</TableHead>
+                      <TableHead className="font-bold text-xs uppercase">Status</TableHead>
+                      <TableHead className="text-right font-bold text-xs uppercase">Operations</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isPaymentsLoading ? (
+                      <TableRow><TableCell colSpan={5} className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
+                    ) : allPayments?.filter(p => p.paymentMethod === 'UPI').length === 0 ? (
+                      <TableRow><TableCell colSpan={5} className="text-center py-20 text-muted-foreground">Queue is empty. No UPI payments logged yet.</TableCell></TableRow>
+                    ) : allPayments?.filter(p => p.paymentMethod === 'UPI').map((pay) => (
+                      <TableRow key={pay.id} className="border-white/5 hover:bg-white/[0.02]">
+                        <TableCell className="text-xs">{pay.paymentDate ? new Date(pay.paymentDate).toLocaleDateString() : 'N/A'}</TableCell>
+                        <TableCell className="font-mono font-bold text-primary">{pay.transactionId}</TableCell>
+                        <TableCell className="font-black text-white">₹{pay.amount}</TableCell>
+                        <TableCell>
+                          <Badge variant={pay.status === 'Completed' ? 'default' : 'outline'} className={pay.status === 'Pending' ? 'border-orange-500/50 text-orange-500' : ''}>
+                            {pay.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {pay.status === 'Pending' ? (
+                            <Button 
+                              size="sm" 
+                              onClick={() => handleApprovePayment(pay)} 
+                              disabled={processingId === pay.id}
+                              className="bg-primary hover:bg-primary/80 font-bold"
+                            >
+                              {processingId === pay.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify & Activate"}
+                            </Button>
+                          ) : (
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center justify-end gap-1">
+                              <CheckCircle2 className="w-3 h-3" /> Fully Verified
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="users">
             <Card className="glass-card overflow-hidden">
@@ -316,7 +369,7 @@ export default function AdminPage() {
                       <TableRow><TableCell colSpan={5} className="text-center py-20 text-muted-foreground">No tasks found.</TableCell></TableRow>
                     ) : allRequests?.map((req) => (
                       <TableRow key={req.id} className="border-white/5 hover:bg-white/[0.02]">
-                        <TableCell className="text-xs font-mono text-muted-foreground">{new Date(req.requestDate).toLocaleString()}</TableCell>
+                        <TableCell className="text-xs font-mono text-muted-foreground">{req.requestDate ? new Date(req.requestDate).toLocaleString() : 'N/A'}</TableCell>
                         <TableCell>
                           <div className="flex flex-col">
                             <span className="text-secondary font-mono font-bold">{req.macAddress}</span>
@@ -343,62 +396,6 @@ export default function AdminPage() {
                              )}
                              <span className={`text-xs font-bold uppercase ${req.status === 'Unblocked' ? 'text-primary' : 'text-orange-500'}`}>{req.status}</span>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="verification">
-            <Card className="glass-card overflow-hidden">
-              <div className="p-6 border-b border-white/5 flex flex-col gap-2">
-                <CardTitle className="text-xl font-bold">UTR Approval Queue</CardTitle>
-                <CardDescription>Manually verify transaction IDs from payment apps.</CardDescription>
-              </div>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-white/5">
-                    <TableRow className="border-white/5">
-                      <TableHead className="font-bold text-xs uppercase">Payment Date</TableHead>
-                      <TableHead className="font-bold text-xs uppercase">UTR Number</TableHead>
-                      <TableHead className="font-bold text-xs uppercase">Amount</TableHead>
-                      <TableHead className="font-bold text-xs uppercase">Status</TableHead>
-                      <TableHead className="text-right font-bold text-xs uppercase">Operations</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isPaymentsLoading ? (
-                      <TableRow><TableCell colSpan={5} className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
-                    ) : allPayments?.length === 0 ? (
-                      <TableRow><TableCell colSpan={5} className="text-center py-20 text-muted-foreground">Queue is empty.</TableCell></TableRow>
-                    ) : allPayments?.map((pay) => (
-                      <TableRow key={pay.id} className="border-white/5 hover:bg-white/[0.02]">
-                        <TableCell className="text-xs">{new Date(pay.paymentDate).toLocaleDateString()}</TableCell>
-                        <TableCell className="font-mono font-bold text-primary">{pay.transactionId}</TableCell>
-                        <TableCell className="font-black text-white">₹{pay.amount}</TableCell>
-                        <TableCell>
-                          <Badge variant={pay.status === 'Completed' ? 'default' : 'outline'} className={pay.status === 'Pending' ? 'border-orange-500/50 text-orange-500' : ''}>
-                            {pay.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {pay.status === 'Pending' ? (
-                            <Button 
-                              size="sm" 
-                              onClick={() => handleApprovePayment(pay)} 
-                              disabled={processingId === pay.id}
-                              className="bg-primary hover:bg-primary/80 font-bold"
-                            >
-                              {processingId === pay.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify & Activate"}
-                            </Button>
-                          ) : (
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center justify-end gap-1">
-                              <CheckCircle2 className="w-3 h-3" /> Fully Verified
-                            </span>
-                          )}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -508,7 +505,7 @@ export default function AdminPage() {
                     <TableRow><TableCell colSpan={4} className="text-center py-20 text-muted-foreground">No inquiries found.</TableCell></TableRow>
                   ) : inquiries?.map((inq) => (
                     <TableRow key={inq.id} className="border-white/5 hover:bg-white/[0.02]">
-                      <TableCell className="text-xs text-muted-foreground">{new Date(inq.submissionDate).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{inq.submissionDate ? new Date(inq.submissionDate).toLocaleDateString() : 'N/A'}</TableCell>
                       <TableCell>
                         <div className="flex flex-col">
                           <span className="text-sm font-bold text-white">{inq.name}</span>
