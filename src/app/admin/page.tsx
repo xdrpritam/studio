@@ -21,7 +21,8 @@ import {
   CheckCircle2,
   XCircle,
   Timer,
-  RefreshCcw
+  RefreshCcw,
+  Edit
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,6 +33,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import { updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import Link from 'next/link';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const ADMIN_USERNAME = 'pd863253';
 const ADMIN_PASSWORD = 'sd7gen3';
@@ -44,6 +47,10 @@ export default function AdminPage() {
   const [passwordInput, setPasswordInput] = useState('');
   const [isSimpleAuthenticated, setIsSimpleAuthenticated] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
+
+  // User Editing State
+  const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   // Redeem Code Creation State
   const [newCode, setNewCode] = useState('');
@@ -188,6 +195,24 @@ export default function AdminPage() {
       title: "Voucher Expired",
       description: `Code ${codeId} has been removed.`,
     });
+  };
+
+  const handleSaveUser = () => {
+    if (!editingUser) return;
+    
+    const userRef = doc(db, 'users', editingUser.id);
+    updateDocumentNonBlocking(userRef, {
+      firstName: editingUser.firstName,
+      lastName: editingUser.lastName,
+      role: editingUser.role,
+      updatedAt: new Date().toISOString()
+    });
+
+    toast({
+      title: "Profile Updated",
+      description: `Changes saved for ${editingUser.email}.`,
+    });
+    setIsEditDialogOpen(false);
   };
 
   if (isUserLoading) {
@@ -352,7 +377,17 @@ export default function AdminPage() {
                           {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}
                         </TableCell>
                         <TableCell className="text-right">
-                           <Button variant="ghost" size="sm" className="text-xs font-bold hover:text-primary">Manage</Button>
+                           <Button 
+                             variant="ghost" 
+                             size="sm" 
+                             className="text-xs font-bold hover:text-primary gap-1.5"
+                             onClick={() => {
+                               setEditingUser(u);
+                               setIsEditDialogOpen(true);
+                             }}
+                           >
+                             <Edit className="w-3 h-3" /> Edit
+                           </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -360,6 +395,57 @@ export default function AdminPage() {
                 </Table>
               </div>
             </Card>
+
+            {/* Edit User Dialog */}
+            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+              <DialogContent className="glass-morphism border-white/10 text-white max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="text-2xl font-bold font-headline">Edit Profile</DialogTitle>
+                  <DialogDescription className="text-muted-foreground">
+                    Modifying authentication record for {editingUser?.email}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-6 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">First Name</Label>
+                      <Input 
+                        value={editingUser?.firstName || ''} 
+                        onChange={(e) => setEditingUser(prev => prev ? {...prev, firstName: e.target.value} : null)}
+                        className="bg-black/20 border-white/10 h-12"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Last Name</Label>
+                      <Input 
+                        value={editingUser?.lastName || ''} 
+                        onChange={(e) => setEditingUser(prev => prev ? {...prev, lastName: e.target.value} : null)}
+                        className="bg-black/20 border-white/10 h-12"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">User Role</Label>
+                    <Select 
+                      value={editingUser?.role || 'user'} 
+                      onValueChange={(v) => setEditingUser(prev => prev ? {...prev, role: v} : null)}
+                    >
+                      <SelectTrigger className="bg-black/20 border-white/10 h-12">
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-card border-white/10 text-white">
+                        <SelectItem value="user">Standard User</SelectItem>
+                        <SelectItem value="admin">Administrator</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter className="gap-2 sm:gap-0">
+                  <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="border-white/10 h-12 font-bold px-8">Cancel</Button>
+                  <Button onClick={handleSaveUser} className="neon-glow font-black h-12 px-8 uppercase tracking-widest">Update Identity</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           <TabsContent value="tasks">
@@ -601,3 +687,4 @@ export default function AdminPage() {
     </div>
   );
 }
+    
