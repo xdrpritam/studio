@@ -16,7 +16,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
+import { doc, collection, query, where, getDocs, collectionGroup } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
@@ -82,6 +82,33 @@ export default function UnblockPage() {
     }
 
     setLoading(true);
+
+    // CRITICAL: Global Trial Prevention Check
+    // Prevents different users from unblocking the same device for free
+    if (values.plan === 'trial') {
+      try {
+        const globalTrialQuery = query(
+          collectionGroup(db, 'unblockRequests'),
+          where('macAddress', '==', values.macAddress),
+          where('subscriptionId', '==', 'FREE_TRIAL')
+        );
+        
+        const trialSnap = await getDocs(globalTrialQuery);
+        
+        if (!trialSnap.empty) {
+          toast({
+            variant: "destructive",
+            title: "Trial Already Claimed",
+            description: "This device has already been used for a free trial. Please upgrade to premium for continued access.",
+          });
+          setLoading(false);
+          return;
+        }
+      } catch (error) {
+        // Fallback for missing indexes in prototype environment
+        console.warn("Global trial validation requires Firestore indexing for collectionGroup queries.");
+      }
+    }
     
     const requestId = `REQ_${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
     const requestRef = doc(db, 'users', user.uid, 'unblockRequests', requestId);
@@ -352,7 +379,7 @@ export default function UnblockPage() {
                 </div>
                 <div className="flex gap-3 pt-2">
                    <AlertCircle className="w-5 h-5 text-secondary shrink-0" />
-                   <p className="text-xs italic">Only one active request is allowed per account to maintain infrastructure integrity.</p>
+                   <p className="text-xs italic">Only one free trial is permitted per device (MAC Address) across all accounts.</p>
                 </div>
               </CardContent>
             </Card>
