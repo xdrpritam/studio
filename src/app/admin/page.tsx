@@ -41,7 +41,10 @@ export default function AdminPage() {
   }, [user, db]);
 
   const { data: adminData, isLoading: isAdminLoading } = useDoc(adminRef);
-  const hasAdminUid = !!adminData || (user?.uid === HARDCODED_ADMIN_UID);
+  
+  // A user is an admin if they have a role document OR if they are the hardcoded primary admin.
+  const isPrimaryAdmin = user?.uid === HARDCODED_ADMIN_UID;
+  const hasAdminUid = !!adminData || isPrimaryAdmin;
 
   // Queries - Only active if simple auth is passed AND user has admin priority
   const inquiriesQuery = useMemoFirebase(() => {
@@ -53,8 +56,6 @@ export default function AdminPage() {
 
   const allRequestsQuery = useMemoFirebase(() => {
     if (!user || !hasAdminUid || !isSimpleAuthenticated) return null;
-    // Note: Collection Group queries require an index. If you see a permission error, 
-    // it may also be Firestore reporting a missing index as a permission issue.
     return query(collectionGroup(db, 'unblockRequests'), orderBy('requestDate', 'desc'));
   }, [db, user, hasAdminUid, isSimpleAuthenticated]);
 
@@ -183,9 +184,9 @@ export default function AdminPage() {
 
     try {
       await batch.commit();
-      toast({ title: "Database Seeded", description: "Sample codes and test data populated." });
+      toast({ title: "Database Seeded", description: "Sample codes populated." });
     } catch (e) {
-      toast({ variant: "destructive", title: "Seeding Failed", description: "Check console for errors." });
+      toast({ variant: "destructive", title: "Seeding Failed", description: "Check permissions." });
     } finally {
       setIsSeeding(false);
     }
@@ -209,7 +210,7 @@ export default function AdminPage() {
             </div>
             <div>
               <h1 className="text-3xl font-bold font-headline text-white">Admin Console</h1>
-              <p className="text-muted-foreground">System Health: <span className="text-green-500 font-bold">Optimal</span></p>
+              <p className="text-muted-foreground">System Identity: <span className="text-primary font-mono text-xs">{user.uid}</span></p>
             </div>
           </div>
           <div className="flex gap-2">
@@ -278,7 +279,7 @@ export default function AdminPage() {
             <Card className="glass-card overflow-hidden">
               <CardHeader>
                 <CardTitle className="text-white">Global MAC Requests</CardTitle>
-                <CardDescription>All user-submitted unblocking tasks currently in the system.</CardDescription>
+                <CardDescription>Real-time stream of all unblocking requests.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -331,7 +332,7 @@ export default function AdminPage() {
             <Card className="glass-card overflow-hidden">
               <CardHeader>
                 <CardTitle className="text-white">UTR Verification Logs</CardTitle>
-                <CardDescription>Manually verify UPI transactions and activate user access.</CardDescription>
+                <CardDescription>Approve UPI transactions to activate user access.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -408,7 +409,7 @@ export default function AdminPage() {
               <Card className="glass-card">
                 <CardHeader>
                   <CardTitle className="text-white">Create Voucher</CardTitle>
-                  <CardDescription>Generate new redeemable codes for instant activation.</CardDescription>
+                  <CardDescription>Generate new redeemable codes.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleCreateCode} className="space-y-4">
@@ -428,7 +429,7 @@ export default function AdminPage() {
                         checked={isMultiUse} 
                         onCheckedChange={(checked) => setIsMultiUse(!!checked)}
                       />
-                      <Label htmlFor="multi" className="text-sm font-medium text-white cursor-pointer">Multi-use code (e.g. for marketing)</Label>
+                      <Label htmlFor="multi" className="text-sm font-medium text-white cursor-pointer">Multi-use code</Label>
                     </div>
                     <Button type="submit" className="w-full neon-glow font-bold">
                       <Plus className="w-4 h-4 mr-2" /> Activate Code
@@ -440,7 +441,7 @@ export default function AdminPage() {
               <Card className="lg:col-span-2 glass-card overflow-hidden">
                 <CardHeader>
                   <CardTitle className="text-white">Active Vouchers</CardTitle>
-                  <CardDescription>Manage codes currently available for users.</CardDescription>
+                  <CardDescription>Manage available codes.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Table>
@@ -494,7 +495,7 @@ export default function AdminPage() {
             <Card className="glass-card overflow-hidden">
               <CardHeader>
                 <CardTitle className="text-white">Contact Inquiries</CardTitle>
-                <CardDescription>Direct messages from users regarding technical issues.</CardDescription>
+                <CardDescription>Messages from users.</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>

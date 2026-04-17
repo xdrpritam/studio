@@ -8,39 +8,37 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    function isAdmin() {
-      return isSignedIn() && (
-        request.auth.uid == 'gKJKDmDMZmg8RvUT119XStZ7Xpt1' || 
-        exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid))
-      );
+    // Core Admin logic - split for rules engine optimization
+    function isPrimaryAdmin() {
+      return isSignedIn() && request.auth.uid == 'gKJKDmDMZmg8RvUT119XStZ7Xpt1';
     }
     
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+    function isDbAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
     // SYSTEM-WIDE ADMIN OVERRIDE
-    // Grant administrators full read/write access to all collections and documents.
-    // This is required for recursive searches and collection group queries in the dashboard.
-    // Explicitly matching the root for collection group 'list' operations.
+    // Split into two allow statements to help the rules engine prove query safety
+    // for collection group 'list' operations on the root documents.
     match /{document=**} {
-      allow read, write: if isAdmin();
+      allow read, write: if isPrimaryAdmin();
+      allow read, write: if isDbAdmin();
     }
 
     // USER-SPECIFIC RULES
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read, write: if isSignedIn() && request.auth.uid == userId;
       
       match /unblockRequests/{requestId} {
-        allow read, write: if isOwner(userId);
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
       }
       
       match /payments/{paymentId} {
-        allow read, write: if isOwner(userId);
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
       }
 
       match /subscriptions/{subscriptionId} {
-        allow read, write: if isOwner(userId);
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
       }
     }
 
