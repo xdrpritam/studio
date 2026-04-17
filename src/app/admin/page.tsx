@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
@@ -245,7 +244,7 @@ export default function AdminPage() {
 
   if (isUserLoading) {
     return (
-      <div className="container mx-auto px-4 py-32 flex flex-col items-center justify-center">
+      <div className="container mx-auto px-4 pt-32 pb-16 flex flex-col items-center justify-center">
         <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
         <p className="text-muted-foreground font-medium animate-pulse">Establishing secure connection...</p>
       </div>
@@ -254,7 +253,7 @@ export default function AdminPage() {
 
   if (isSimpleAuthenticated) {
     return (
-      <div className="container mx-auto px-4 py-8 md:py-12 space-y-8 md:space-y-10">
+      <div className="container mx-auto px-4 pt-24 pb-12 md:pt-32 space-y-8 md:space-y-10">
         <header className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6">
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest">
@@ -701,8 +700,8 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-16 md:py-24 flex flex-col justify-center items-center min-h-[85vh]">
-      <div className="w-full max-w-lg space-y-10 md:space-y-12 text-center">
+    <div className="container mx-auto px-4 pt-32 pb-16 flex flex-col justify-center items-center min-h-screen">
+      <div className="w-full max-w-lg space-y-8 md:space-y-12 text-center">
         <div className="space-y-4 px-4">
            <h1 className="text-4xl md:text-5xl font-black font-headline tracking-tighter">Terminal <span className="text-primary neon-text">Lock</span></h1>
            <p className="text-muted-foreground text-base md:text-lg">Administrative authorization is required to access core systems.</p>
@@ -713,9 +712,9 @@ export default function AdminPage() {
             <Lock className="w-8 h-8 md:w-10 md:h-10 text-primary" />
           </div>
           
-          <form onSubmit={handleSimpleLogin} className="space-y-5 md:space-y-6 text-left">
-            <div className="space-y-4">
-              <div className="space-y-2">
+          <form onSubmit={handleSimpleLogin} className="space-y-6 md:space-y-8 text-left">
+            <div className="space-y-6">
+              <div className="space-y-3">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Admin Identifier</Label>
                 <Input 
                   value={usernameInput} 
@@ -724,7 +723,7 @@ export default function AdminPage() {
                   className="bg-black/40 border-white/10 h-12 md:h-14 font-mono focus:border-primary transition-all text-sm"
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Security Key</Label>
                 <Input 
                   type="password" 
