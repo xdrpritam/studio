@@ -2,58 +2,63 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isSignedIn() { return request.auth != null; }
-    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
-    function isAdmin() { 
+    
+    // Helper functions for common security checks
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
       return isSignedIn() && (
         request.auth.uid == 'gKJKDmDMZmg8RvUT119XStZ7Xpt1' || 
         exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid))
-      ); 
+      );
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Support Collection Group queries for Admin dashboard
-    // These rules allow admins to query across all subcollections of these names.
-    match /{path=**}/unblockRequests/{requestId} {
-      allow read, write: if isAdmin();
-    }
-    match /{path=**}/payments/{paymentId} {
-      allow read, write: if isAdmin();
-    }
-    match /{path=**}/subscriptions/{subscriptionId} {
+    // SYSTEM-WIDE ADMIN OVERRIDE
+    // Grant administrators full read/write access to all collections and documents.
+    // This is required for recursive searches and collection group queries in the dashboard.
+    match /{document=**} {
       allow read, write: if isAdmin();
     }
 
+    // USER-SPECIFIC RULES
+    // Allows users to manage their own profile and unblock requests.
     match /users/{userId} {
-      allow read, write: if isOwner(userId) || isAdmin();
+      allow read, write: if isOwner(userId);
       
       match /unblockRequests/{requestId} {
-        allow read, write: if isOwner(userId) || isAdmin();
+        allow read, write: if isOwner(userId);
       }
       
       match /payments/{paymentId} {
-        allow read, write: if isOwner(userId) || isAdmin();
+        allow read, write: if isOwner(userId);
       }
 
       match /subscriptions/{subscriptionId} {
-        allow read, write: if isOwner(userId) || isAdmin();
+        allow read, write: if isOwner(userId);
       }
     }
 
+    // PUBLIC/USER-ACCESSIBLE UTILITIES
     match /redeemCodes/{codeId} {
       allow get: if isSignedIn();
       // Allow users to update code usage status during redemption
       allow update: if isSignedIn();
-      allow list, create, delete: if isAdmin();
     }
 
     match /contactInquiries/{inquiryId} {
+      // Allow anyone to submit a contact form
       allow create: if true;
-      allow read, write: if isAdmin();
     }
 
     match /roles_admin/{uid} {
+      // Allow users to check their own admin status
       allow read: if isSignedIn();
-      allow write: if isAdmin();
     }
   }
 }
