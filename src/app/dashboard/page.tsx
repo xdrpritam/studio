@@ -167,7 +167,7 @@ export default function DashboardPage() {
                 <div><p className="text-[10px] text-muted-foreground font-bold uppercase">Node</p><p className="text-xs font-bold">{requestData.wifiProvider}</p></div>
                 <div><p className="text-[10px] text-muted-foreground font-bold uppercase">SSID</p><p className="text-xs font-bold">{requestData.wifiName}</p></div>
               </div>
-              {isTrial && (
+              {(isTrial || isPending) && (
                 <Link href={`/payment?requestId=${requestData.id}`} className="block mt-6">
                   <Button size="sm" className="w-full bg-primary font-bold h-11">Upgrade Now <ArrowUpCircle className="ml-2 w-4 h-4" /></Button>
                 </Link>

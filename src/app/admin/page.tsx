@@ -108,6 +108,7 @@ export default function AdminPage() {
 
   const handleDeleteRequest = (userId: string, requestId: string, mac: string) => {
     if (!confirm("Delete task?")) return;
+    // CRITICAL: Clean up global tracker so MAC can be re-used
     deleteDocumentNonBlocking(doc(db, 'activeMacs', mac));
     deleteDocumentNonBlocking(doc(db, 'users', userId, 'unblockRequests', requestId));
     toast({ title: "Task Purged" });
@@ -152,7 +153,13 @@ export default function AdminPage() {
         </div>
 
         <Tabs defaultValue="verification">
-          <TabsList className="bg-white/5 p-1 mb-6 rounded-2xl flex overflow-x-auto"><TabsTrigger value="verification">Verification</TabsTrigger><TabsTrigger value="tasks">Tasks</TabsTrigger><TabsTrigger value="users">Registry</TabsTrigger><TabsTrigger value="vouchers">Vouchers</TabsTrigger><TabsTrigger value="inquiries">Inquiries</TabsTrigger></TabsList>
+          <TabsList className="bg-white/5 p-1 mb-6 rounded-2xl flex overflow-x-auto h-auto">
+            <TabsTrigger value="verification">Verification</TabsTrigger>
+            <TabsTrigger value="tasks">Tasks</TabsTrigger>
+            <TabsTrigger value="users">Registry</TabsTrigger>
+            <TabsTrigger value="vouchers">Vouchers</TabsTrigger>
+            <TabsTrigger value="inquiries">Inquiries</TabsTrigger>
+          </TabsList>
           
           <TabsContent value="verification">
             <Card className="glass-card"><div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>UTR</TableHead><TableHead>Amount</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader><TableBody>
@@ -177,7 +184,52 @@ export default function AdminPage() {
               ))}
             </TableBody></Table></div></Card>
           </TabsContent>
+
+          <TabsContent value="vouchers">
+            <Card className="glass-card p-6 space-y-6">
+              <form onSubmit={handleCreateCode} className="flex gap-4">
+                <Input value={newCode} onChange={(e) => setNewCode(e.target.value)} placeholder="Enter Voucher Code" className="max-w-xs" />
+                <div className="flex items-center gap-2">
+                   <Checkbox id="multi" checked={isMultiUse} onCheckedChange={(c) => setIsMultiUse(!!c)} />
+                   <Label htmlFor="multi">Multi-Use</Label>
+                </div>
+                <Button type="submit">Generate</Button>
+              </form>
+              <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Code</TableHead><TableHead>Usage</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader><TableBody>
+                {redeemCodes?.map(code => (
+                  <TableRow key={code.id}><TableCell className="font-bold">{code.id}</TableCell><TableCell>{code.multiUse ? 'Multi' : (code.isUsed ? 'Used' : 'Available')}</TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => handleDeleteCode(code.id)}><Trash2 className="w-4 h-4" /></Button></TableCell></TableRow>
+                ))}
+              </TableBody></Table></div>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="inquiries">
+            <Card className="glass-card"><div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Contact</TableHead><TableHead>Subject</TableHead><TableHead>Status</TableHead></TableRow></TableHeader><TableBody>
+              {sortedInquiries.map(inq => (
+                <TableRow key={inq.id}><TableCell className="text-xs">{new Date(inq.submissionDate).toLocaleDateString()}</TableCell><TableCell><div className="flex flex-col"><span className="text-xs font-bold">{inq.name}</span><span className="text-[10px] text-muted-foreground">{inq.email}</span></div></TableCell><TableCell className="text-xs">{inq.subject}</TableCell><TableCell><Badge>{inq.status}</Badge></TableCell></TableRow>
+              ))}
+            </TableBody></Table></div></Card>
+          </TabsContent>
         </Tabs>
+
+        {/* Edit User Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="glass-morphism border-white/10">
+            <DialogHeader><DialogTitle>Edit Profile</DialogTitle></DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2"><Label>First Name</Label><Input value={editingUser?.firstName || ''} onChange={(e) => setEditingUser({ ...editingUser, firstName: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Last Name</Label><Input value={editingUser?.lastName || ''} onChange={(e) => setEditingUser({ ...editingUser, lastName: e.target.value })} /></div>
+              <div className="space-y-2">
+                <Label>Access Level</Label>
+                <Select value={editingUser?.role || 'user'} onValueChange={(v) => setEditingUser({ ...editingUser, role: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="user">Standard User</SelectItem><SelectItem value="admin">Administrator</SelectItem></SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter><Button onClick={handleSaveUser} className="w-full">Save Identity</Button></DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
