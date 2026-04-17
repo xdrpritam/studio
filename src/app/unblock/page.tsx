@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Shield, ArrowRight, CheckCircle2, Wifi, Tablet, Tag, CreditCard, Clock, Lock, Loader2, AlertCircle, LayoutDashboard } from 'lucide-react';
+import { Shield, ArrowRight, CheckCircle2, Wifi, Tablet, Tag, CreditCard, Clock, Lock, Loader2, AlertCircle, LayoutDashboard, DatabaseZap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -35,7 +35,7 @@ export default function UnblockPage() {
   const db = useFirestore();
   const [loading, setLoading] = useState(false);
 
-  // Check for existing requests to enforce "one request per user" rule
+  // Check for existing requests for THIS user to enforce "one request per user" rule
   const requestsQuery = useMemoFirebase(() => {
     if (!user) return null;
     return collection(db, 'users', user.uid, 'unblockRequests');
@@ -83,37 +83,52 @@ export default function UnblockPage() {
 
     setLoading(true);
 
-    // CRITICAL: Global Trial Prevention Check
-    // Prevents different users from unblocking the same device for free
-    if (values.plan === 'trial') {
-      try {
+    // CRITICAL: Infrastructure & Policy Validation
+    try {
+      // 1. Global Trial Prevention (One trial per HARDWARE device across all accounts)
+      if (values.plan === 'trial') {
         const globalTrialQuery = query(
           collectionGroup(db, 'unblockRequests'),
           where('macAddress', '==', values.macAddress),
           where('subscriptionId', '==', 'FREE_TRIAL')
         );
-        
         const trialSnap = await getDocs(globalTrialQuery);
-        
         if (!trialSnap.empty) {
           toast({
             variant: "destructive",
             title: "Trial Already Claimed",
-            description: "This device has already been used for a free trial. Please upgrade to premium for continued access.",
+            description: "This device hardware ID has already utilized a free trial period. Please use the Premium Plan.",
           });
           setLoading(false);
           return;
         }
-      } catch (error) {
-        // Fallback for missing indexes in prototype environment
-        console.warn("Global trial validation requires Firestore indexing for collectionGroup queries.");
       }
+
+      // 2. Global Overload Protection (Prevents multiple users from requesting the same MAC simultaneously)
+      const globalActiveQuery = query(
+        collectionGroup(db, 'unblockRequests'),
+        where('macAddress', '==', values.macAddress),
+        where('status', 'in', ['Pending', 'Unblocked'])
+      );
+      const activeSnap = await getDocs(globalActiveQuery);
+      if (!activeSnap.empty) {
+        toast({
+          variant: "destructive",
+          title: "Infrastructure Overload",
+          description: "This MAC address is already being processed in another active session. Duplicate tasks are blocked.",
+        });
+        setLoading(false);
+        return;
+      }
+    } catch (error) {
+      // Fallback for missing indexes in prototype environment
+      console.warn("Global validation requires Firestore indexing for collectionGroup queries.", error);
     }
     
     const requestId = `REQ_${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
     const requestRef = doc(db, 'users', user.uid, 'unblockRequests', requestId);
 
-    // Trial is set to exactly 1 hour
+    // Trial is exactly 1 hour, Paid is 30 days
     const trialDurationMs = 60 * 60 * 1000;
     const paidDurationMs = 30 * 24 * 60 * 60 * 1000;
 
@@ -212,7 +227,7 @@ export default function UnblockPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-16">
+    <div className="container mx-auto px-4 py-24">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12 space-y-4">
           <h1 className="font-headline text-4xl md:text-5xl font-bold">Unblock Request</h1>
@@ -245,7 +260,7 @@ export default function UnblockPage() {
                                 className="bg-background/50 border-white/10 font-mono" 
                               />
                             </FormControl>
-                            <FormDescription className="text-xs">Physical address of your device.</FormDescription>
+                            <FormDescription className="text-xs">Unique hardware ID of your device.</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -358,7 +373,7 @@ export default function UnblockPage() {
                     />
 
                     <Button type="submit" size="lg" className="w-full h-14 text-lg font-bold neon-glow rounded-xl" disabled={loading}>
-                      {loading ? "Processing..." : (form.watch('plan') === 'trial' ? "Start Free Trial" : "Proceed to Payment")}
+                      {loading ? "Initializing..." : (form.watch('plan') === 'trial' ? "Start Free Trial" : "Proceed to Payment")}
                       {!loading && <ArrowRight className="ml-2 w-5 h-5" />}
                     </Button>
                   </form>
@@ -370,16 +385,18 @@ export default function UnblockPage() {
           <div className="space-y-6">
             <Card className="glass-morphism border-white/10">
               <CardHeader>
-                <CardTitle className="text-lg">Security Check</CardTitle>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <DatabaseZap className="w-5 h-5 text-primary" /> Infrastructure
+                </CardTitle>
               </CardHeader>
               <CardContent className="text-sm space-y-4 text-muted-foreground">
                 <div className="flex gap-3">
                   <Shield className="w-5 h-5 text-primary shrink-0" />
-                  <p>Our backend validates your MAC address format and verifies the connection with the selected provider.</p>
+                  <p>Our backend validates your hardware ID and verifies real-time status with regional network controllers.</p>
                 </div>
                 <div className="flex gap-3 pt-2">
-                   <AlertCircle className="w-5 h-5 text-secondary shrink-0" />
-                   <p className="text-xs italic">Only one free trial is permitted per device (MAC Address) across all accounts.</p>
+                   <AlertCircle className="w-5 h-5 text-orange-500 shrink-0" />
+                   <p className="text-xs italic"><strong>Overload Protection:</strong> Only one free trial is permitted per hardware device (MAC) globally. Duplicate active sessions for the same MAC are automatically rejected.</p>
                 </div>
               </CardContent>
             </Card>
