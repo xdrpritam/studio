@@ -56,7 +56,7 @@ export default function AdminPage() {
   const [newCode, setNewCode] = useState('');
   const [isMultiUse, setIsMultiUse] = useState(false);
 
-  // 1. Queries - OrderBy removed to avoid index requirements in prototype
+  // 1. Queries
   const usersQuery = useMemoFirebase(() => {
     if (!user || !isSimpleAuthenticated) return null;
     return collection(db, 'users');
@@ -254,18 +254,18 @@ export default function AdminPage() {
 
   if (isSimpleAuthenticated) {
     return (
-      <div className="container mx-auto px-4 py-12 space-y-10">
-        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div className="container mx-auto px-4 py-8 md:py-12 space-y-8 md:space-y-10">
+        <header className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6">
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-widest">
               <ShieldCheck className="w-4 h-4" /> Root Authorization Active
             </div>
-            <h1 className="text-4xl md:text-5xl font-black font-headline tracking-tighter">
+            <h1 className="text-3xl md:text-5xl font-black font-headline tracking-tighter">
               Admin <span className="text-primary neon-text">Terminal</span>
             </h1>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right hidden sm:block">
+          <div className="flex items-center justify-between w-full md:w-auto gap-4">
+            <div className="text-left md:text-right">
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Operator</p>
               <p className="text-sm font-mono text-white">{ADMIN_USERNAME}</p>
             </div>
@@ -275,22 +275,22 @@ export default function AdminPage() {
           </div>
         </header>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
           {[
             { label: "Users", value: sortedUsers.length, icon: Users, color: "text-primary" },
-            { label: "Network Tasks", value: sortedRequests.length, icon: Database, color: "text-secondary" },
+            { label: "Tasks", value: sortedRequests.length, icon: Database, color: "text-secondary" },
             { label: "UTR Pending", value: sortedPayments.filter(p => p.status === 'Pending').length, icon: Timer, color: "text-orange-500" },
             { label: "Vouchers", value: redeemCodes?.length || 0, icon: ShieldCheck, color: "text-secondary" },
             { label: "Inquiries", value: sortedInquiries.length, icon: MessageSquare, color: "text-primary" }
           ].map((stat, i) => (
-            <Card key={i} className="glass-card group hover:scale-[1.02] transition-transform">
-              <CardContent className="p-6 flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center shrink-0`}>
-                  <stat.icon className={`w-6 h-6 ${stat.color}`} />
+            <Card key={i} className="glass-card group transition-transform active:scale-95 sm:hover:scale-[1.02]">
+              <CardContent className="p-4 md:p-6 flex items-center gap-3 md:gap-4">
+                <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl bg-white/5 flex items-center justify-center shrink-0`}>
+                  <stat.icon className={`w-5 h-5 md:w-6 md:h-6 ${stat.color}`} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{stat.label}</p>
-                  <p className="text-2xl font-black font-headline text-white">{stat.value}</p>
+                  <p className="text-[9px] md:text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{stat.label}</p>
+                  <p className="text-lg md:text-2xl font-black font-headline text-white">{stat.value}</p>
                 </div>
               </CardContent>
             </Card>
@@ -298,29 +298,31 @@ export default function AdminPage() {
         </div>
 
         <Tabs defaultValue="verification" className="w-full">
-          <TabsList className="bg-white/5 border border-white/10 p-1 mb-8 h-14 rounded-2xl overflow-x-auto justify-start">
-            <TabsTrigger value="verification" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-6">UTR Verification</TabsTrigger>
-            <TabsTrigger value="tasks" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-6">Network Tasks</TabsTrigger>
-            <TabsTrigger value="users" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-6">User Registry</TabsTrigger>
-            <TabsTrigger value="vouchers" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-6">Voucher Mgmt</TabsTrigger>
-            <TabsTrigger value="inquiries" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-6">User Support</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto pb-2 scrollbar-hide">
+            <TabsList className="bg-white/5 border border-white/10 p-1 mb-6 h-12 md:h-14 rounded-2xl flex w-max min-w-full">
+              <TabsTrigger value="verification" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-4 md:px-6 text-xs md:text-sm">UTR Verification</TabsTrigger>
+              <TabsTrigger value="tasks" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-4 md:px-6 text-xs md:text-sm">Network Tasks</TabsTrigger>
+              <TabsTrigger value="users" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-4 md:px-6 text-xs md:text-sm">User Registry</TabsTrigger>
+              <TabsTrigger value="vouchers" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-4 md:px-6 text-xs md:text-sm">Voucher Mgmt</TabsTrigger>
+              <TabsTrigger value="inquiries" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-4 md:px-6 text-xs md:text-sm">User Support</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="verification">
             <Card className="glass-card overflow-hidden">
-              <div className="p-6 border-b border-white/5 flex flex-col gap-2">
-                <CardTitle className="text-xl font-bold">UTR Approval Queue</CardTitle>
-                <CardDescription>Verify 12-digit transaction IDs. Items appear here immediately after user submission.</CardDescription>
+              <div className="p-4 md:p-6 border-b border-white/5 flex flex-col gap-2">
+                <CardTitle className="text-lg md:text-xl font-bold">UTR Approval Queue</CardTitle>
+                <CardDescription className="text-xs">Verify 12-digit transaction IDs. Items appear here immediately.</CardDescription>
               </div>
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader className="bg-white/5">
                     <TableRow className="border-white/5">
-                      <TableHead className="font-bold text-xs uppercase">Date</TableHead>
-                      <TableHead className="font-bold text-xs uppercase">UTR Number</TableHead>
-                      <TableHead className="font-bold text-xs uppercase">Amount</TableHead>
-                      <TableHead className="font-bold text-xs uppercase">Status</TableHead>
-                      <TableHead className="text-right font-bold text-xs uppercase">Operations</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase">Date</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase">UTR Number</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase">Amount</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase">Status</TableHead>
+                      <TableHead className="text-right font-bold text-[10px] uppercase">Operations</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -330,11 +332,11 @@ export default function AdminPage() {
                       <TableRow><TableCell colSpan={5} className="text-center py-20 text-muted-foreground">Queue is empty. No UPI payments logged yet.</TableCell></TableRow>
                     ) : sortedPayments.filter(p => p.paymentMethod === 'UPI').map((pay) => (
                       <TableRow key={pay.id} className="border-white/5 hover:bg-white/[0.02]">
-                        <TableCell className="text-xs">{pay.paymentDate ? new Date(pay.paymentDate).toLocaleDateString() : 'N/A'}</TableCell>
-                        <TableCell className="font-mono font-bold text-primary">{pay.transactionId}</TableCell>
-                        <TableCell className="font-black text-white">₹{pay.amount}</TableCell>
+                        <TableCell className="text-[10px]">{pay.paymentDate ? new Date(pay.paymentDate).toLocaleDateString() : 'N/A'}</TableCell>
+                        <TableCell className="font-mono font-bold text-primary text-xs">{pay.transactionId}</TableCell>
+                        <TableCell className="font-black text-white text-xs">₹{pay.amount}</TableCell>
                         <TableCell>
-                          <Badge variant={pay.status === 'Completed' ? 'default' : 'outline'} className={pay.status === 'Pending' ? 'border-orange-500/50 text-orange-500' : ''}>
+                          <Badge variant={pay.status === 'Completed' ? 'default' : 'outline'} className={`text-[9px] uppercase ${pay.status === 'Pending' ? 'border-orange-500/50 text-orange-500' : ''}`}>
                             {pay.status}
                           </Badge>
                         </TableCell>
@@ -345,20 +347,18 @@ export default function AdminPage() {
                                 size="sm" 
                                 onClick={() => handleApprovePayment(pay)} 
                                 disabled={processingId === pay.id}
-                                className="bg-primary hover:bg-primary/80 font-bold"
+                                className="bg-primary hover:bg-primary/80 font-bold h-8 text-[10px] md:text-xs"
                               >
-                                {processingId === pay.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify & Activate"}
+                                {processingId === pay.id ? <Loader2 className="w-3 h-3 animate-spin" /> : "Verify"}
                               </Button>
                             ) : (
-                              <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                                <CheckCircle2 className="w-3 h-3" /> Fully Verified
-                              </span>
+                              <CheckCircle2 className="w-4 h-4 text-primary" />
                             )}
                             <Button 
                               variant="ghost" 
                               size="icon" 
                               onClick={() => handleDeletePayment(pay.userId, pay.id)}
-                              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              className="w-8 h-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
@@ -374,22 +374,22 @@ export default function AdminPage() {
 
           <TabsContent value="users">
             <Card className="glass-card overflow-hidden">
-              <div className="p-6 border-b border-white/5 flex justify-between items-center">
-                <CardTitle className="text-xl font-bold">User Database</CardTitle>
-                <div className="relative w-64">
+              <div className="p-4 md:p-6 border-b border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <CardTitle className="text-lg md:text-xl font-bold">User Database</CardTitle>
+                <div className="relative w-full md:w-64">
                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                   <Input placeholder="Search users..." className="pl-10 h-10 bg-black/20 border-white/10 text-xs" />
+                   <Input placeholder="Search users..." className="pl-10 h-10 bg-black/20 border-white/10 text-xs w-full" />
                 </div>
               </div>
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader className="bg-white/5">
                     <TableRow className="border-white/5">
-                      <TableHead className="font-bold text-xs uppercase">Identity</TableHead>
-                      <TableHead className="font-bold text-xs uppercase">Email</TableHead>
-                      <TableHead className="font-bold text-xs uppercase">Role</TableHead>
-                      <TableHead className="font-bold text-xs uppercase">Joined</TableHead>
-                      <TableHead className="text-right font-bold text-xs uppercase">Actions</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase">Identity</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase">Email</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase">Role</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase">Joined</TableHead>
+                      <TableHead className="text-right font-bold text-[10px] uppercase">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -400,37 +400,37 @@ export default function AdminPage() {
                     ) : sortedUsers.map((u) => (
                       <TableRow key={u.id} className="border-white/5 hover:bg-white/[0.02]">
                         <TableCell>
-                          <div className="flex flex-col">
-                            <span className="text-sm font-bold text-white">{u.firstName} {u.lastName}</span>
-                            <span className="text-[10px] text-muted-foreground font-mono">{u.id}</span>
+                          <div className="flex flex-col max-w-[120px]">
+                            <span className="text-xs font-bold text-white truncate">{u.firstName} {u.lastName}</span>
+                            <span className="text-[9px] text-muted-foreground font-mono truncate">{u.id}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-xs">{u.email}</TableCell>
+                        <TableCell className="text-[10px] max-w-[150px] truncate">{u.email}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="text-[10px] uppercase border-primary/30 text-primary">
+                          <Badge variant="outline" className="text-[9px] uppercase border-primary/30 text-primary">
                             {u.role || 'User'}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
+                        <TableCell className="text-[10px] text-muted-foreground">
                           {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}
                         </TableCell>
                         <TableCell className="text-right">
                            <div className="flex justify-end gap-1">
                             <Button 
                               variant="ghost" 
-                              size="sm" 
-                              className="text-xs font-bold hover:text-primary gap-1.5"
+                              size="icon" 
+                              className="w-8 h-8 text-primary hover:bg-primary/10"
                               onClick={() => {
                                 setEditingUser(u);
                                 setIsEditDialogOpen(true);
                               }}
                             >
-                              <Edit className="w-3 h-3" /> Edit
+                              <Edit className="w-4 h-4" />
                             </Button>
                             <Button 
                               variant="ghost" 
                               size="icon" 
-                              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              className="w-8 h-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                               onClick={() => handleDeleteUser(u.id)}
                             >
                               <Trash2 className="w-4 h-4" />
@@ -446,10 +446,10 @@ export default function AdminPage() {
 
             {/* Edit User Dialog */}
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-              <DialogContent className="glass-morphism border-white/10 text-white max-w-md">
+              <DialogContent className="glass-morphism border-white/10 text-white max-w-[95vw] md:max-w-md rounded-3xl">
                 <DialogHeader>
-                  <DialogTitle className="text-2xl font-bold font-headline">Edit Profile</DialogTitle>
-                  <DialogDescription className="text-muted-foreground">
+                  <DialogTitle className="text-xl md:text-2xl font-bold font-headline">Edit Profile</DialogTitle>
+                  <DialogDescription className="text-muted-foreground text-xs md:text-sm">
                     Modifying authentication record for {editingUser?.email}
                   </DialogDescription>
                 </DialogHeader>
@@ -460,7 +460,7 @@ export default function AdminPage() {
                       <Input 
                         value={editingUser?.firstName || ''} 
                         onChange={(e) => setEditingUser(prev => prev ? {...prev, firstName: e.target.value} : null)}
-                        className="bg-black/20 border-white/10 h-12"
+                        className="bg-black/20 border-white/10 h-11 text-sm"
                       />
                     </div>
                     <div className="space-y-2">
@@ -468,7 +468,7 @@ export default function AdminPage() {
                       <Input 
                         value={editingUser?.lastName || ''} 
                         onChange={(e) => setEditingUser(prev => prev ? {...prev, lastName: e.target.value} : null)}
-                        className="bg-black/20 border-white/10 h-12"
+                        className="bg-black/20 border-white/10 h-11 text-sm"
                       />
                     </div>
                   </div>
@@ -478,7 +478,7 @@ export default function AdminPage() {
                       value={editingUser?.role || 'user'} 
                       onValueChange={(v) => setEditingUser(prev => prev ? {...prev, role: v} : null)}
                     >
-                      <SelectTrigger className="bg-black/20 border-white/10 h-12">
+                      <SelectTrigger className="bg-black/20 border-white/10 h-11 text-sm">
                         <SelectValue placeholder="Select role" />
                       </SelectTrigger>
                       <SelectContent className="bg-card border-white/10 text-white">
@@ -488,9 +488,9 @@ export default function AdminPage() {
                     </Select>
                   </div>
                 </div>
-                <DialogFooter className="gap-2 sm:gap-0">
-                  <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="border-white/10 h-12 font-bold px-8">Cancel</Button>
-                  <Button onClick={handleSaveUser} className="neon-glow font-black h-12 px-8 uppercase tracking-widest">Update Identity</Button>
+                <DialogFooter className="flex-row gap-2">
+                  <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="flex-1 border-white/10 h-11 font-bold text-xs">Cancel</Button>
+                  <Button onClick={handleSaveUser} className="flex-1 neon-glow font-black h-11 text-xs uppercase tracking-widest">Update</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -498,66 +498,61 @@ export default function AdminPage() {
 
           <TabsContent value="tasks">
             <Card className="glass-card overflow-hidden">
-              <div className="p-6 border-b border-white/5 flex justify-between items-center">
-                <CardTitle className="text-xl font-bold">Recent MAC Requests</CardTitle>
-                <div className="relative w-64">
+              <div className="p-4 md:p-6 border-b border-white/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <CardTitle className="text-lg md:text-xl font-bold">Recent MAC Requests</CardTitle>
+                <div className="relative w-full md:w-64">
                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                   <Input placeholder="Filter MAC..." className="pl-10 h-10 bg-black/20 border-white/10 text-xs" />
+                   <Input placeholder="Filter MAC..." className="pl-10 h-10 bg-black/20 border-white/10 text-xs w-full" />
                 </div>
               </div>
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader className="bg-white/5">
                     <TableRow className="border-white/5">
-                      <TableHead className="font-bold text-xs uppercase">Timestamp</TableHead>
-                      <TableHead className="font-bold text-xs uppercase">MAC Identity</TableHead>
-                      <TableHead className="font-bold text-xs uppercase">Infrastructure</TableHead>
-                      <TableHead className="font-bold text-xs uppercase">Plan</TableHead>
-                      <TableHead className="font-bold text-xs uppercase">Status</TableHead>
-                      <TableHead className="text-right font-bold text-xs uppercase">Action</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase">MAC Identity</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase">Infra</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase">Plan</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase">Status</TableHead>
+                      <TableHead className="text-right font-bold text-[10px] uppercase">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isRequestsLoading ? (
-                      <TableRow><TableCell colSpan={6} className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
+                      <TableRow><TableCell colSpan={5} className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
                     ) : sortedRequests.length === 0 ? (
-                      <TableRow><TableCell colSpan={6} className="text-center py-20 text-muted-foreground">No tasks found.</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={5} className="text-center py-20 text-muted-foreground">No tasks found.</TableCell></TableRow>
                     ) : sortedRequests.map((req) => (
                       <TableRow key={req.id} className="border-white/5 hover:bg-white/[0.02]">
-                        <TableCell className="text-xs font-mono text-muted-foreground">{req.requestDate ? new Date(req.requestDate).toLocaleString() : 'N/A'}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col max-w-[140px]">
+                            <span className="text-secondary font-mono font-bold text-[11px] truncate">{req.macAddress}</span>
+                            <span className="text-[9px] text-muted-foreground truncate">{req.deviceName}</span>
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="text-secondary font-mono font-bold">{req.macAddress}</span>
-                            <span className="text-[10px] text-muted-foreground">{req.deviceName}</span>
+                            <span className="text-[10px] text-white/80 font-bold">{req.wifiProvider}</span>
+                            <span className="text-[9px] text-muted-foreground truncate max-w-[80px]">{req.wifiName}</span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-[10px] h-5 bg-white/5 border-white/10">{req.wifiProvider}</Badge>
-                            <span className="text-xs text-white/80">{req.wifiName}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={req.subscriptionId === 'FREE_TRIAL' ? 'bg-muted text-muted-foreground' : 'bg-primary/20 text-primary border-primary/30'}>
+                          <Badge className={`text-[9px] px-2 h-5 ${req.subscriptionId === 'FREE_TRIAL' ? 'bg-muted text-muted-foreground' : 'bg-primary/20 text-primary border-primary/30'}`}>
                             {req.subscriptionId === 'FREE_TRIAL' ? 'Trial' : 'Premium'}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                             {req.status === 'Unblocked' ? (
-                               <CheckCircle2 className="w-4 h-4 text-primary" />
-                             ) : (
-                               <Loader2 className="w-4 h-4 text-orange-500 animate-spin" />
-                             )}
-                             <span className={`text-xs font-bold uppercase ${req.status === 'Unblocked' ? 'text-primary' : 'text-orange-500'}`}>{req.status}</span>
-                          </div>
+                           {req.status === 'Unblocked' ? (
+                             <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                           ) : (
+                             <Loader2 className="w-3.5 h-3.5 text-orange-500 animate-spin" />
+                           )}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button 
                             variant="ghost" 
                             size="icon" 
                             onClick={() => handleDeleteRequest(req.userId, req.id)}
-                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            className="w-8 h-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -571,11 +566,11 @@ export default function AdminPage() {
           </TabsContent>
 
           <TabsContent value="vouchers">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <Card className="glass-card p-8 h-fit space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+              <Card className="glass-card p-6 md:p-8 h-fit space-y-6 md:space-y-8">
                 <div className="space-y-2">
-                  <h3 className="text-xl font-bold">Generate Voucher</h3>
-                  <p className="text-xs text-muted-foreground">Create single or multi-use activation keys.</p>
+                  <h3 className="text-lg md:text-xl font-bold">Generate Voucher</h3>
+                  <p className="text-[11px] text-muted-foreground">Create single or multi-use activation keys.</p>
                 </div>
                 <form onSubmit={handleCreateCode} className="space-y-6">
                   <div className="space-y-2">
@@ -584,117 +579,120 @@ export default function AdminPage() {
                       value={newCode} 
                       onChange={(e) => setNewCode(e.target.value.toUpperCase())} 
                       placeholder="e.g. FREE100" 
-                      className="bg-black/20 border-white/10 h-12 uppercase font-mono"
+                      className="bg-black/20 border-white/10 h-11 md:h-12 uppercase font-mono text-sm"
                     />
                   </div>
-                  <div className="flex items-center space-x-3 p-4 bg-white/5 rounded-xl border border-white/10">
+                  <div className="flex items-center space-x-3 p-3 md:p-4 bg-white/5 rounded-xl border border-white/10">
                     <Checkbox id="multi" checked={isMultiUse} onCheckedChange={(c) => setIsMultiUse(!!c)} />
                     <div className="space-y-0.5">
-                      <Label htmlFor="multi" className="text-sm font-bold cursor-pointer">Multi-use Token</Label>
-                      <p className="text-[10px] text-muted-foreground">Allows redemption by multiple users.</p>
+                      <Label htmlFor="multi" className="text-xs md:text-sm font-bold cursor-pointer">Multi-use Token</Label>
+                      <p className="text-[9px] text-muted-foreground">Allows multiple redemptions.</p>
                     </div>
                   </div>
-                  <Button type="submit" className="w-full h-12 font-black neon-glow uppercase tracking-widest">Generate Key</Button>
+                  <Button type="submit" className="w-full h-11 md:h-12 font-black neon-glow uppercase tracking-widest text-xs">Generate Key</Button>
                 </form>
               </Card>
 
               <Card className="lg:col-span-2 glass-card overflow-hidden">
-                <div className="p-6 border-b border-white/5">
-                   <CardTitle className="text-xl font-bold">Active Inventory</CardTitle>
+                <div className="p-4 md:p-6 border-b border-white/5">
+                   <CardTitle className="text-lg md:text-xl font-bold">Active Inventory</CardTitle>
                 </div>
-                <Table>
-                  <TableHeader className="bg-white/5">
-                    <TableRow className="border-white/5">
-                      <TableHead className="font-bold text-xs uppercase">Voucher Key</TableHead>
-                      <TableHead className="font-bold text-xs uppercase">Usage Type</TableHead>
-                      <TableHead className="font-bold text-xs uppercase">Redemption Status</TableHead>
-                      <TableHead className="text-right font-bold text-xs uppercase">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isCodesLoading ? (
-                      <TableRow><TableCell colSpan={4} className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
-                    ) : redeemCodes?.length === 0 ? (
-                      <TableRow><TableCell colSpan={4} className="text-center py-20 text-muted-foreground">No active vouchers.</TableCell></TableRow>
-                    ) : redeemCodes?.map((code) => (
-                      <TableRow key={code.id} className="border-white/5 hover:bg-white/[0.02]">
-                        <TableCell className="font-mono font-black text-secondary">{code.id}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-[10px] bg-white/5 border-white/10 uppercase">
-                            {code.multiUse ? 'Multi-Use' : 'Single-Use'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                           {code.isUsed && !code.multiUse ? (
-                             <span className="text-xs text-muted-foreground flex items-center gap-1"><XCircle className="w-3 h-3" /> Exhausted</span>
-                           ) : (
-                             <span className="text-xs text-primary flex items-center gap-1 font-bold"><CheckCircle2 className="w-3 h-3" /> Active</span>
-                           )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => handleDeleteCode(code.id)} 
-                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-white/5">
+                      <TableRow className="border-white/5">
+                        <TableHead className="font-bold text-[10px] uppercase">Voucher Key</TableHead>
+                        <TableHead className="font-bold text-[10px] uppercase">Usage</TableHead>
+                        <TableHead className="font-bold text-[10px] uppercase">Status</TableHead>
+                        <TableHead className="text-right font-bold text-[10px] uppercase">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {isCodesLoading ? (
+                        <TableRow><TableCell colSpan={4} className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
+                      ) : redeemCodes?.length === 0 ? (
+                        <TableRow><TableCell colSpan={4} className="text-center py-20 text-muted-foreground">No active vouchers.</TableCell></TableRow>
+                      ) : redeemCodes?.map((code) => (
+                        <TableRow key={code.id} className="border-white/5 hover:bg-white/[0.02]">
+                          <TableCell className="font-mono font-black text-secondary text-xs">{code.id}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-[9px] bg-white/5 border-white/10 uppercase">
+                              {code.multiUse ? 'Multi' : 'Single'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                             {code.isUsed && !code.multiUse ? (
+                               <XCircle className="w-3.5 h-3.5 text-muted-foreground" />
+                             ) : (
+                               <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                             )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleDeleteCode(code.id)} 
+                              className="w-8 h-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </Card>
             </div>
           </TabsContent>
 
           <TabsContent value="inquiries">
             <Card className="glass-card overflow-hidden">
-              <div className="p-6 border-b border-white/5">
-                <CardTitle className="text-xl font-bold">Support Inquiries</CardTitle>
+              <div className="p-4 md:p-6 border-b border-white/5">
+                <CardTitle className="text-lg md:text-xl font-bold">Support Inquiries</CardTitle>
               </div>
-              <Table>
-                <TableHeader className="bg-white/5">
-                  <TableRow className="border-white/5">
-                    <TableHead className="font-bold text-xs uppercase">Date</TableHead>
-                    <TableHead className="font-bold text-xs uppercase">Sender</TableHead>
-                    <TableHead className="font-bold text-xs uppercase">Subject</TableHead>
-                    <TableHead className="text-right font-bold text-xs uppercase">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isInquiriesLoading ? (
-                    <TableRow><TableCell colSpan={4} className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
-                  ) : sortedInquiries.length === 0 ? (
-                    <TableRow><TableCell colSpan={4} className="text-center py-20 text-muted-foreground">No inquiries found.</TableCell></TableRow>
-                  ) : sortedInquiries.map((inq) => (
-                    <TableRow key={inq.id} className="border-white/5 hover:bg-white/[0.02]">
-                      <TableCell className="text-xs text-muted-foreground">{inq.submissionDate ? new Date(inq.submissionDate).toLocaleDateString() : 'N/A'}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-white">{inq.name}</span>
-                          <span className="text-[10px] text-muted-foreground">{inq.email}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-xs">{inq.subject}</TableCell>
-                      <TableCell className="text-right">
-                         <div className="flex justify-end items-center gap-1">
-                          <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10">Details <ChevronRight className="ml-1 w-4 h-4" /></Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => handleDeleteInquiry(inq.id)}
-                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                         </div>
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-white/5">
+                    <TableRow className="border-white/5">
+                      <TableHead className="font-bold text-[10px] uppercase">Date</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase">Sender</TableHead>
+                      <TableHead className="font-bold text-[10px] uppercase">Subject</TableHead>
+                      <TableHead className="text-right font-bold text-[10px] uppercase">Action</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {isInquiriesLoading ? (
+                      <TableRow><TableCell colSpan={4} className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
+                    ) : sortedInquiries.length === 0 ? (
+                      <TableRow><TableCell colSpan={4} className="text-center py-20 text-muted-foreground">No inquiries found.</TableCell></TableRow>
+                    ) : sortedInquiries.map((inq) => (
+                      <TableRow key={inq.id} className="border-white/5 hover:bg-white/[0.02]">
+                        <TableCell className="text-[10px] text-muted-foreground">{inq.submissionDate ? new Date(inq.submissionDate).toLocaleDateString() : 'N/A'}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col max-w-[120px]">
+                            <span className="text-xs font-bold text-white truncate">{inq.name}</span>
+                            <span className="text-[9px] text-muted-foreground truncate">{inq.email}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-[10px] max-w-[150px] truncate">{inq.subject}</TableCell>
+                        <TableCell className="text-right">
+                           <div className="flex justify-end items-center gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleDeleteInquiry(inq.id)}
+                              className="w-8 h-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                           </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </Card>
           </TabsContent>
         </Tabs>
@@ -703,19 +701,19 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-24 flex flex-col justify-center items-center min-h-[80vh]">
-      <div className="w-full max-w-lg space-y-12 text-center">
-        <div className="space-y-4">
-           <h1 className="text-5xl font-black font-headline tracking-tighter">Terminal <span className="text-primary neon-text">Lock</span></h1>
-           <p className="text-muted-foreground text-lg">Administrative authorization is required to access core systems.</p>
+    <div className="container mx-auto px-4 py-16 md:py-24 flex flex-col justify-center items-center min-h-[85vh]">
+      <div className="w-full max-w-lg space-y-10 md:space-y-12 text-center">
+        <div className="space-y-4 px-4">
+           <h1 className="text-4xl md:text-5xl font-black font-headline tracking-tighter">Terminal <span className="text-primary neon-text">Lock</span></h1>
+           <p className="text-muted-foreground text-base md:text-lg">Administrative authorization is required to access core systems.</p>
         </div>
 
-        <Card className="glass-morphism border-white/10 p-8">
-          <div className="mx-auto w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center mb-8 border border-primary/20">
-            <Lock className="w-10 h-10 text-primary" />
+        <Card className="glass-morphism border-white/10 p-6 md:p-8 rounded-3xl mx-4">
+          <div className="mx-auto w-16 h-16 md:w-20 md:h-20 rounded-3xl bg-primary/10 flex items-center justify-center mb-6 md:mb-8 border border-primary/20">
+            <Lock className="w-8 h-8 md:w-10 md:h-10 text-primary" />
           </div>
           
-          <form onSubmit={handleSimpleLogin} className="space-y-6 text-left">
+          <form onSubmit={handleSimpleLogin} className="space-y-5 md:space-y-6 text-left">
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Admin Identifier</Label>
@@ -723,7 +721,7 @@ export default function AdminPage() {
                   value={usernameInput} 
                   onChange={(e) => setUsernameInput(e.target.value)} 
                   placeholder="Enter Operator ID" 
-                  className="bg-black/40 border-white/10 h-14 font-mono focus:border-primary transition-all"
+                  className="bg-black/40 border-white/10 h-12 md:h-14 font-mono focus:border-primary transition-all text-sm"
                 />
               </div>
               <div className="space-y-2">
@@ -733,25 +731,25 @@ export default function AdminPage() {
                   value={passwordInput} 
                   onChange={(e) => setPasswordInput(e.target.value)} 
                   placeholder="••••••••" 
-                  className="bg-black/40 border-white/10 h-14 font-mono focus:border-primary transition-all"
+                  className="bg-black/40 border-white/10 h-12 md:h-14 font-mono focus:border-primary transition-all text-sm"
                 />
               </div>
             </div>
 
             {!user && (
-              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl flex items-start gap-3 text-sm text-destructive">
-                <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                <p>Authentication Required: Please <Link href="/login" className="font-bold underline">Login</Link> to your account first.</p>
+              <div className="p-3 md:p-4 bg-destructive/10 border border-destructive/20 rounded-2xl flex items-start gap-3 text-xs text-destructive">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <p>Authentication Required: Please <Link href="/login" className="font-bold underline">Login</Link> first.</p>
               </div>
             )}
 
-            <Button type="submit" disabled={!user} className="w-full h-16 text-xl font-black neon-glow rounded-2xl uppercase tracking-[0.2em] transition-transform hover:scale-105 active:scale-95">
+            <Button type="submit" disabled={!user} className="w-full h-14 md:h-16 text-lg font-bold neon-glow rounded-2xl uppercase tracking-[0.2em] transition-transform active:scale-95">
               Unlock Terminal
             </Button>
           </form>
         </Card>
 
-        <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest">System Status: <span className="text-primary animate-pulse">Operational</span></p>
+        <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest px-4">System Status: <span className="text-primary animate-pulse">Operational</span></p>
       </div>
     </div>
   );
