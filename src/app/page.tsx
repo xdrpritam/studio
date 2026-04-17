@@ -93,7 +93,7 @@ export default function Home() {
       <section id="how-it-works" className="container mx-auto px-4 py-32">
         <div className="section-header mb-20">
           <p className="text-primary font-bold text-xs uppercase tracking-[0.2em] mb-3">Process</p>
-          <h2 className="section-title">Simple. <span class="gradient-text">Transparent.</span> Legitimate.</h2>
+          <h2 className="section-title">Simple. <span className="className-text">Transparent.</span> Legitimate.</h2>
           <p className="section-subtitle">Our four-step process ensures your request is handled properly and reviewed by the right people.</p>
         </div>
 
