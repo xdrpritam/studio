@@ -88,6 +88,12 @@
     "/redeemCodes/{codeId}": {
       "schema": { "$ref": "#/entities/RedeemCode" },
       "description": "Stores active voucher codes."
+    },
+    "/activeMacs/{macAddress}": {
+      "description": "Global registry to prevent duplicate active sessions for the same hardware."
+    },
+    "/trialedMacs/{macAddress}": {
+      "description": "Global registry to prevent hardware-level trial abuse."
     }
   }
 }
