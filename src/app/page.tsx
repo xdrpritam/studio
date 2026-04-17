@@ -22,7 +22,7 @@ export default function Home() {
             <span>🔒</span> Authorized Requests Only &nbsp;•&nbsp; No Hacking
           </div>
 
-          <h1 className="font-headline text-3xl md:text-5xl lg:text-7xl font-black leading-[1.1] tracking-tighter animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <h1 className="font-headline text-3xl md:text-5xl lg:text-7xl font-bold leading-[1.1] tracking-tight animate-in fade-in slide-in-from-bottom-4 duration-700">
             Get Your Device<br />
             <span className="gradient-text">Back Online — Legitimately</span>
           </h1>
@@ -78,7 +78,7 @@ export default function Home() {
             { label: "Support", value: "24/7" },
           ].map((stat, i) => (
             <div key={i} className="text-center p-6 md:p-10 border-r border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors border-b lg:border-b-0">
-              <p className="text-2xl md:text-4xl font-black font-headline gradient-text">{stat.value}</p>
+              <p className="text-2xl md:text-4xl font-bold font-headline gradient-text">{stat.value}</p>
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-2">{stat.label}</p>
             </div>
           ))}
@@ -87,10 +87,10 @@ export default function Home() {
 
       {/* ===== HOW IT WORKS ===== */}
       <section id="how-it-works" className="container mx-auto px-4 py-20 md:py-32">
-        <div className="text-center max-w-2xl mx-auto mb-16 md:mb-20 space-y-4">
-          <p className="text-primary font-bold text-xs uppercase tracking-[0.2em]">Process</p>
+        <div className="text-center max-w-2xl mx-auto mb-16 md:mb-20">
+          <p className="text-primary font-bold text-xs uppercase tracking-[0.2em] mb-3">Process</p>
           <h2 className="section-title">Simple. <span className="gradient-text">Transparent.</span> Legitimate.</h2>
-          <p className="text-muted-foreground text-sm md:text-base">Our four-step process ensures your request is handled properly and reviewed by the right people.</p>
+          <p className="section-subtitle">Our four-step process ensures your request is handled properly and reviewed by the right people.</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -126,7 +126,7 @@ export default function Home() {
                 <div className="text-4xl mb-4">
                   {isp === 'Jio' ? '📡' : isp === 'Airtel' ? '📶' : '🌐'}
                 </div>
-                <h4 className="text-xl font-black">{isp}</h4>
+                <h4 className="text-xl font-bold">{isp}</h4>
                 <div className="text-success text-[10px] font-bold uppercase tracking-widest">
                   ✓ Active Support
                 </div>
@@ -153,7 +153,7 @@ export default function Home() {
             <div className="space-y-4">
               <h4 className="text-xl font-bold">Free Review</h4>
               <div className="flex items-baseline gap-1">
-                <span className="text-4xl md:text-5xl font-black font-headline">₹0</span>
+                <span className="text-4xl md:text-5xl font-bold font-headline">₹0</span>
               </div>
               <p className="text-muted-foreground text-[10px] uppercase tracking-widest font-bold">One-time request</p>
             </div>
@@ -176,11 +176,11 @@ export default function Home() {
 
           {/* Priority Plan */}
           <div className="glass-card p-8 md:p-12 rounded-[2rem] md:rounded-[3rem] space-y-8 flex flex-col border-primary/30 relative">
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-accent text-white px-6 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg">⚡ Most Popular</div>
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-accent text-white px-6 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-full shadow-lg">⚡ Most Popular</div>
             <div className="space-y-4">
               <h4 className="text-xl font-bold text-primary">Priority Plan</h4>
               <div className="flex items-baseline gap-1">
-                <span className="text-4xl md:text-5xl font-black font-headline gradient-text">₹100</span>
+                <span className="text-4xl md:text-5xl font-bold font-headline gradient-text">₹100</span>
                 <span className="text-muted-foreground text-sm">/ month</span>
               </div>
               <p className="text-muted-foreground text-[10px] uppercase tracking-widest font-bold">Billed monthly</p>
@@ -240,7 +240,7 @@ export default function Home() {
       {/* ===== FINAL CTA ===== */}
       <section className="container mx-auto px-4 py-20 md:py-32">
         <div className="glass-card p-12 md:p-32 rounded-[2.5rem] md:rounded-[4rem] text-center space-y-8 relative overflow-hidden border-primary/20">
-          <h2 className="text-3xl md:text-6xl font-black font-headline tracking-tighter">
+          <h2 className="text-3xl md:text-6xl font-bold font-headline tracking-tight">
             Ready to Get <br />
             <span className="gradient-text">Back Online?</span>
           </h2>

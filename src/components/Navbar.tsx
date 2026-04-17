@@ -48,7 +48,7 @@ export function Navbar() {
         </Link>
 
         {/* Desktop Navigation */}
-        <div className="hidden lg:flex items-center gap-8 text-[11px] font-black uppercase tracking-widest text-muted-foreground">
+        <div className="hidden lg:flex items-center gap-8 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
           <Link href="/" className="hover:text-primary transition-colors">Home</Link>
           <Link href="/#how-it-works" className="hover:text-primary transition-colors">How It Works</Link>
           <Link href="/#plans" className="hover:text-primary transition-colors">Plans</Link>
@@ -79,7 +79,7 @@ export function Navbar() {
                 <Button variant="ghost" className="font-bold text-xs uppercase tracking-wider text-muted-foreground hover:text-white">Login</Button>
               </Link>
               <Link href="/unblock">
-                <Button size="sm" className="bg-primary hover:bg-primary/90 font-black text-[10px] uppercase tracking-[0.2em] px-4 md:px-6 h-10 rounded-full">
+                <Button size="sm" className="bg-primary hover:bg-primary/90 font-bold text-[10px] uppercase tracking-[0.2em] px-4 md:px-6 h-10 rounded-full">
                   Request <ChevronRight className="w-3 h-3 ml-1" />
                 </Button>
               </Link>
@@ -102,7 +102,7 @@ export function Navbar() {
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div className="lg:hidden fixed inset-0 bg-background/98 backdrop-blur-2xl z-[1000] flex flex-col items-center justify-center gap-8 animate-in fade-in duration-300">
-          <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="text-3xl font-black font-headline tracking-tighter uppercase italic">
+          <Link href="/" onClick={() => setIsMobileMenuOpen(false)} className="text-3xl font-bold font-headline tracking-tight">
             Home
           </Link>
           <Link href="/#how-it-works" onClick={() => setIsMobileMenuOpen(false)} className="text-2xl font-bold text-muted-foreground">
@@ -130,7 +130,7 @@ export function Navbar() {
             </Link>
           )}
           <Link href="/unblock" onClick={() => setIsMobileMenuOpen(false)}>
-            <Button size="lg" className="bg-primary hover:bg-primary/90 font-black uppercase tracking-[0.2em] px-10 h-16 rounded-2xl text-lg neon-glow">
+            <Button size="lg" className="bg-primary hover:bg-primary/90 font-bold uppercase tracking-[0.2em] px-10 h-16 rounded-2xl text-lg neon-glow">
               Submit Request
             </Button>
           </Link>
