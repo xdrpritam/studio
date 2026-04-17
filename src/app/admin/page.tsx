@@ -2,11 +2,11 @@
 "use client";
 
 import { useUser, useDoc, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, orderBy, collectionGroup, writeBatch, serverTimestamp, getDocs } from 'firebase/firestore';
+import { doc, collection, query, orderBy, collectionGroup, writeBatch } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Lock, Zap, MessageSquare, Wifi, User, Key, LogIn, ShieldAlert, AlertCircle, Loader2, CreditCard, CheckCircle, ExternalLink, ShieldCheck, Plus, Ticket, Trash2, Database, RefreshCcw } from 'lucide-react';
+import { Lock, Zap, Wifi, User, Key, LogIn, ShieldAlert, AlertCircle, Loader2, CreditCard, ShieldCheck, Plus, Ticket, Trash2, Database } from 'lucide-react';
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
@@ -35,43 +35,35 @@ export default function AdminPage() {
   const [newCode, setNewCode] = useState('');
   const [isMultiUse, setIsMultiUse] = useState(false);
 
-  const adminRef = useMemoFirebase(() => {
-    if (!user) return null;
-    return doc(db, 'roles_admin', user.uid);
-  }, [user, db]);
-
-  const { data: adminData, isLoading: isAdminLoading } = useDoc(adminRef);
-  
-  // A user is an admin if they have a role document OR if they are the hardcoded primary admin.
+  // A user is an admin if they are the hardcoded primary admin.
   const isPrimaryAdmin = user?.uid === HARDCODED_ADMIN_UID;
-  const hasAdminUid = !!adminData || isPrimaryAdmin;
 
-  // Queries - Only active if simple auth is passed AND user has admin priority
+  // Queries - Only active if simple auth is passed AND user is primary admin
   const inquiriesQuery = useMemoFirebase(() => {
-    if (!user || !hasAdminUid || !isSimpleAuthenticated) return null;
+    if (!user || !isPrimaryAdmin || !isSimpleAuthenticated) return null;
     return query(collection(db, 'contactInquiries'), orderBy('submissionDate', 'desc'));
-  }, [db, user, hasAdminUid, isSimpleAuthenticated]);
+  }, [db, user, isPrimaryAdmin, isSimpleAuthenticated]);
 
   const { data: inquiries, isLoading: isInquiriesLoading } = useCollection(inquiriesQuery);
 
   const allRequestsQuery = useMemoFirebase(() => {
-    if (!user || !hasAdminUid || !isSimpleAuthenticated) return null;
+    if (!user || !isPrimaryAdmin || !isSimpleAuthenticated) return null;
     return query(collectionGroup(db, 'unblockRequests'), orderBy('requestDate', 'desc'));
-  }, [db, user, hasAdminUid, isSimpleAuthenticated]);
+  }, [db, user, isPrimaryAdmin, isSimpleAuthenticated]);
 
   const { data: allRequests, isLoading: isRequestsLoading } = useCollection(allRequestsQuery);
 
   const allPaymentsQuery = useMemoFirebase(() => {
-    if (!user || !hasAdminUid || !isSimpleAuthenticated) return null;
+    if (!user || !isPrimaryAdmin || !isSimpleAuthenticated) return null;
     return query(collectionGroup(db, 'payments'), orderBy('paymentDate', 'desc'));
-  }, [db, user, hasAdminUid, isSimpleAuthenticated]);
+  }, [db, user, isPrimaryAdmin, isSimpleAuthenticated]);
 
   const { data: allPayments, isLoading: isPaymentsLoading } = useCollection(allPaymentsQuery);
 
   const redeemCodesQuery = useMemoFirebase(() => {
-    if (!user || !hasAdminUid || !isSimpleAuthenticated) return null;
+    if (!user || !isPrimaryAdmin || !isSimpleAuthenticated) return null;
     return collection(db, 'redeemCodes');
-  }, [db, user, hasAdminUid, isSimpleAuthenticated]);
+  }, [db, user, isPrimaryAdmin, isSimpleAuthenticated]);
 
   const { data: redeemCodes, isLoading: isCodesLoading } = useCollection(redeemCodesQuery);
 
@@ -192,7 +184,7 @@ export default function AdminPage() {
     }
   };
 
-  if (isUserLoading || (user && isAdminLoading)) {
+  if (isUserLoading) {
     return (
       <div className="container mx-auto px-4 py-32 flex justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -200,7 +192,7 @@ export default function AdminPage() {
     );
   }
 
-  if (isSimpleAuthenticated && user && hasAdminUid) {
+  if (isSimpleAuthenticated && isPrimaryAdmin) {
     return (
       <div className="container mx-auto px-4 py-16 space-y-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -210,13 +202,13 @@ export default function AdminPage() {
             </div>
             <div>
               <h1 className="text-3xl font-bold font-headline text-white">Admin Console</h1>
-              <p className="text-muted-foreground">System Identity: <span className="text-primary font-mono text-xs">{user.uid}</span></p>
+              <p className="text-muted-foreground">Identity Verified: <span className="text-primary font-mono text-xs">{user?.uid}</span></p>
             </div>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleSeedData} disabled={isSeeding} className="border-white/10 glass-morphism">
               {isSeeding ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Database className="w-4 h-4 mr-2" />}
-              Seed Sample Codes
+              Seed Codes
             </Button>
             <Button variant="outline" size="sm" onClick={() => setIsSimpleAuthenticated(false)} className="border-white/10 glass-morphism">
               Lock Console
@@ -227,9 +219,7 @@ export default function AdminPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card className="glass-card">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
-                <Zap className="w-4 h-4" /> Total Tasks
-              </CardTitle>
+              <CardTitle className="text-sm font-bold text-muted-foreground uppercase">Requests</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-4xl font-bold font-headline text-white">{allRequests?.length || 0}</p>
@@ -237,9 +227,7 @@ export default function AdminPage() {
           </Card>
           <Card className="glass-card">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
-                <CreditCard className="w-4 h-4" /> UTR Logs
-              </CardTitle>
+              <CardTitle className="text-sm font-bold text-muted-foreground uppercase">UTR Logs</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-4xl font-bold font-headline text-white">{allPayments?.length || 0}</p>
@@ -247,9 +235,7 @@ export default function AdminPage() {
           </Card>
           <Card className="glass-card">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
-                <Ticket className="w-4 h-4" /> Active Codes
-              </CardTitle>
+              <CardTitle className="text-sm font-bold text-muted-foreground uppercase">Vouchers</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-4xl font-bold font-headline text-white">{redeemCodes?.length || 0}</p>
@@ -257,282 +243,152 @@ export default function AdminPage() {
           </Card>
           <Card className="glass-card">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
-                <Wifi className="w-4 h-4" /> Global Nodes
-              </CardTitle>
+              <CardTitle className="text-sm font-bold text-muted-foreground uppercase">System</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-4xl font-bold font-headline text-secondary">Active</p>
+              <p className="text-4xl font-bold font-headline text-secondary">Online</p>
             </CardContent>
           </Card>
         </div>
 
         <Tabs defaultValue="requests" className="w-full">
-          <TabsList className="bg-white/5 border border-white/10 mb-6 p-1 h-12 flex w-fit">
-            <TabsTrigger value="requests" className="data-[state=active]:bg-primary h-full px-6">MAC Tasks</TabsTrigger>
-            <TabsTrigger value="payments" className="data-[state=active]:bg-primary h-full px-6">UTR Verification</TabsTrigger>
-            <TabsTrigger value="redeem" className="data-[state=active]:bg-primary h-full px-6">Vouchers</TabsTrigger>
-            <TabsTrigger value="inquiries" className="data-[state=active]:bg-primary h-full px-6">Inquiries</TabsTrigger>
+          <TabsList className="bg-white/5 border border-white/10 mb-6">
+            <TabsTrigger value="requests">MAC Tasks</TabsTrigger>
+            <TabsTrigger value="payments">UTR Verification</TabsTrigger>
+            <TabsTrigger value="redeem">Vouchers</TabsTrigger>
+            <TabsTrigger value="inquiries">Inquiries</TabsTrigger>
           </TabsList>
 
           <TabsContent value="requests">
             <Card className="glass-card overflow-hidden">
-              <CardHeader>
-                <CardTitle className="text-white">Global MAC Requests</CardTitle>
-                <CardDescription>Real-time stream of all unblocking requests.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-white/5 hover:bg-transparent">
-                      <TableHead>Date</TableHead>
-                      <TableHead>MAC Address</TableHead>
-                      <TableHead>Device</TableHead>
-                      <TableHead>Provider</TableHead>
-                      <TableHead>Status</TableHead>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>MAC Address</TableHead>
+                    <TableHead>Device</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isRequestsLoading ? (
+                    <TableRow><TableCell colSpan={4} className="text-center py-12"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
+                  ) : allRequests?.map((req) => (
+                    <TableRow key={req.id}>
+                      <TableCell className="text-xs">{new Date(req.requestDate).toLocaleDateString()}</TableCell>
+                      <TableCell className="font-mono text-xs text-secondary">{req.macAddress}</TableCell>
+                      <TableCell>{req.deviceName}</TableCell>
+                      <TableCell>
+                        <Badge className={req.status === 'Unblocked' ? 'bg-primary' : 'bg-orange-500'}>{req.status}</Badge>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isRequestsLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-12">
-                          <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
-                        </TableCell>
-                      </TableRow>
-                    ) : allRequests && allRequests.length > 0 ? (
-                      allRequests.map((req) => (
-                        <TableRow key={req.id} className="border-white/5 hover:bg-white/5">
-                          <TableCell className="text-xs text-muted-foreground">
-                            {new Date(req.requestDate).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell className="font-mono text-xs font-bold text-secondary">{req.macAddress}</TableCell>
-                          <TableCell className="font-medium text-white">{req.deviceName}</TableCell>
-                          <TableCell className="text-white">{req.wifiProvider}</TableCell>
-                          <TableCell>
-                            <Badge variant={req.status === 'Unblocked' ? 'default' : 'secondary'} className={req.status === 'Unblocked' ? 'bg-primary' : 'bg-orange-500'}>
-                              {req.status}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                          No requests found.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
+                  ))}
+                </TableBody>
+              </Table>
             </Card>
           </TabsContent>
 
           <TabsContent value="payments">
             <Card className="glass-card overflow-hidden">
-              <CardHeader>
-                <CardTitle className="text-white">UTR Verification Logs</CardTitle>
-                <CardDescription>Approve UPI transactions to activate user access.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-white/5 hover:bg-transparent">
-                      <TableHead>Date</TableHead>
-                      <TableHead>Transaction ID (UTR)</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Method</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Action</TableHead>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>UTR</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isPaymentsLoading ? (
+                    <TableRow><TableCell colSpan={5} className="text-center py-12"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
+                  ) : allPayments?.map((pay) => (
+                    <TableRow key={pay.id}>
+                      <TableCell className="text-xs">{new Date(pay.paymentDate).toLocaleDateString()}</TableCell>
+                      <TableCell className="font-mono text-xs text-primary">{pay.transactionId}</TableCell>
+                      <TableCell>₹{pay.amount}</TableCell>
+                      <TableCell>{pay.status}</TableCell>
+                      <TableCell className="text-right">
+                        {pay.status === 'Pending' && (
+                          <Button size="sm" onClick={() => handleApprovePayment(pay)} disabled={processingId === pay.id}>
+                            Approve
+                          </Button>
+                        )}
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isPaymentsLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-12">
-                          <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
-                        </TableCell>
-                      </TableRow>
-                    ) : allPayments && allPayments.length > 0 ? (
-                      allPayments.map((pay) => (
-                        <TableRow key={pay.id} className="border-white/5 hover:bg-white/5">
-                          <TableCell className="text-xs text-muted-foreground">
-                            {new Date(pay.paymentDate).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell className="font-mono text-xs font-bold text-primary select-all">
-                            {pay.transactionId}
-                          </TableCell>
-                          <TableCell className="font-bold text-white">₹{pay.amount}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="border-white/10 uppercase text-[10px]">
-                              {pay.paymentMethod}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge 
-                              variant={pay.status === 'Completed' ? 'default' : 'secondary'} 
-                              className={pay.status === 'Completed' ? 'bg-primary' : 'bg-orange-500'}
-                            >
-                              {pay.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {pay.status === 'Pending' && (
-                              <Button 
-                                size="sm" 
-                                className="h-8 neon-glow bg-primary text-white font-bold px-4"
-                                onClick={() => handleApprovePayment(pay)}
-                                disabled={processingId === pay.id}
-                              >
-                                {processingId === pay.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3 mr-1.5" />}
-                                Approve
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                          No pending UTR logs found.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
+                  ))}
+                </TableBody>
+              </Table>
             </Card>
           </TabsContent>
 
           <TabsContent value="redeem">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <Card className="glass-card">
-                <CardHeader>
-                  <CardTitle className="text-white">Create Voucher</CardTitle>
-                  <CardDescription>Generate new redeemable codes.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleCreateCode} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="code" className="text-white">Code</Label>
-                      <Input 
-                        id="code"
-                        placeholder="e.g., SAVE100"
-                        value={newCode}
-                        onChange={(e) => setNewCode(e.target.value)}
-                        className="bg-background/50 border-white/10"
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="multi" 
-                        checked={isMultiUse} 
-                        onCheckedChange={(checked) => setIsMultiUse(!!checked)}
-                      />
-                      <Label htmlFor="multi" className="text-sm font-medium text-white cursor-pointer">Multi-use code</Label>
-                    </div>
-                    <Button type="submit" className="w-full neon-glow font-bold">
-                      <Plus className="w-4 h-4 mr-2" /> Activate Code
-                    </Button>
-                  </form>
-                </CardContent>
+              <Card className="glass-card p-6">
+                <form onSubmit={handleCreateCode} className="space-y-4">
+                  <Label>New Code</Label>
+                  <Input value={newCode} onChange={(e) => setNewCode(e.target.value)} placeholder="e.g., SAVE100" />
+                  <div className="flex items-center space-x-2">
+                    <Checkbox id="multi" checked={isMultiUse} onCheckedChange={(c) => setIsMultiUse(!!c)} />
+                    <Label htmlFor="multi">Multi-use</Label>
+                  </div>
+                  <Button type="submit" className="w-full">Create Voucher</Button>
+                </form>
               </Card>
-
               <Card className="lg:col-span-2 glass-card overflow-hidden">
-                <CardHeader>
-                  <CardTitle className="text-white">Active Vouchers</CardTitle>
-                  <CardDescription>Manage available codes.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-white/5 hover:bg-transparent">
-                        <TableHead>Code</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Usage</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Code</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Usage</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isCodesLoading ? (
+                      <TableRow><TableCell colSpan={4} className="text-center py-12"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
+                    ) : redeemCodes?.map((code) => (
+                      <TableRow key={code.id}>
+                        <TableCell className="font-mono font-bold text-primary">{code.id}</TableCell>
+                        <TableCell className="text-xs">{code.multiUse ? 'Multi' : 'Single'}</TableCell>
+                        <TableCell>{code.isUsed && !code.multiUse ? 'Redeemed' : 'Active'}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteCode(code.id)} className="text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {isCodesLoading ? (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center py-12">
-                            <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
-                          </TableCell>
-                        </TableRow>
-                      ) : redeemCodes && redeemCodes.length > 0 ? (
-                        redeemCodes.map((code) => (
-                          <TableRow key={code.id} className="border-white/5 hover:bg-white/5">
-                            <TableCell className="font-mono font-bold text-primary">{code.id}</TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{code.multiUse ? 'Multi-use' : 'Single-use'}</TableCell>
-                            <TableCell>
-                              <Badge variant={code.isUsed && !code.multiUse ? 'secondary' : 'default'} className={code.isUsed && !code.multiUse ? 'bg-muted' : 'bg-green-500/20 text-green-500 border-green-500/30'}>
-                                {code.isUsed && !code.multiUse ? 'Redeemed' : 'Available'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button variant="ghost" size="icon" onClick={() => handleDeleteCode(code.id)} className="text-destructive hover:bg-destructive/10">
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
-                            No active vouchers found.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
+                    ))}
+                  </TableBody>
+                </Table>
               </Card>
             </div>
           </TabsContent>
 
           <TabsContent value="inquiries">
             <Card className="glass-card overflow-hidden">
-              <CardHeader>
-                <CardTitle className="text-white">Contact Inquiries</CardTitle>
-                <CardDescription>Messages from users.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-white/5 hover:bg-transparent">
-                      <TableHead>Date</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Subject</TableHead>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Subject</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isInquiriesLoading ? (
+                    <TableRow><TableCell colSpan={4} className="text-center py-12"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
+                  ) : inquiries?.map((inq) => (
+                    <TableRow key={inq.id}>
+                      <TableCell className="text-xs">{new Date(inq.submissionDate).toLocaleDateString()}</TableCell>
+                      <TableCell>{inq.name}</TableCell>
+                      <TableCell>{inq.email}</TableCell>
+                      <TableCell>{inq.subject}</TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isInquiriesLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center py-12">
-                          <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
-                        </TableCell>
-                      </TableRow>
-                    ) : inquiries && inquiries.length > 0 ? (
-                      inquiries.map((inquiry) => (
-                        <TableRow key={inquiry.id} className="border-white/5 hover:bg-white/5">
-                          <TableCell className="text-xs text-muted-foreground">{new Date(inquiry.submissionDate).toLocaleDateString()}</TableCell>
-                          <TableCell className="font-bold text-white">{inquiry.name}</TableCell>
-                          <TableCell className="text-primary">{inquiry.email}</TableCell>
-                          <TableCell className="text-white">{inquiry.subject}</TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
-                          No inquiries found.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
+                  ))}
+                </TableBody>
+              </Table>
             </Card>
           </TabsContent>
         </Tabs>
@@ -543,78 +399,39 @@ export default function AdminPage() {
   return (
     <div className="container mx-auto px-4 py-24 flex justify-center items-center min-h-[80vh]">
       <div className="w-full max-w-md space-y-6">
-        <Card className="glass-morphism border-white/10 overflow-hidden">
-          <div className="h-1.5 w-full bg-primary animate-pulse" />
-          <CardHeader className="text-center space-y-2">
+        <Card className="glass-morphism border-white/10">
+          <CardHeader className="text-center">
             <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-              {(!user || !hasAdminUid) ? <ShieldAlert className="w-8 h-8 text-destructive" /> : <Lock className="w-8 h-8 text-primary" />}
+              {!isPrimaryAdmin ? <ShieldAlert className="w-8 h-8 text-destructive" /> : <Lock className="w-8 h-8 text-primary" />}
             </div>
-            <CardTitle className="text-3xl font-bold font-headline text-white">
-              {(!user || !hasAdminUid) ? "Access Restricted" : "Secure Auth"}
-            </CardTitle>
-            <CardDescription>
-              {(!user || !hasAdminUid) ? "Unauthorized session detected" : "Enter management credentials"}
-            </CardDescription>
+            <CardTitle>{!isPrimaryAdmin ? "Access Restricted" : "Secure Auth"}</CardTitle>
+            <CardDescription>{!isPrimaryAdmin ? "Unauthorized session detected" : "Enter management credentials"}</CardDescription>
           </CardHeader>
           
-          {(!user || !hasAdminUid) ? (
-            <CardContent className="space-y-6">
-              <div className="p-6 bg-destructive/10 border border-destructive/20 rounded-2xl space-y-4">
-                <p className="text-xs font-bold text-destructive uppercase tracking-widest flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4" /> System Guard Active
-                </p>
-                <div className="space-y-2">
-                  <p className="text-[10px] text-muted-foreground uppercase font-bold">Session Identity</p>
-                  <code className="block p-3 bg-black/40 rounded-xl text-xs break-all border border-white/5 font-mono select-all text-destructive">
-                    {user?.uid || "NOT_LOGGED_IN"}
-                  </code>
-                </div>
-                {!user ? (
-                  <Link href="/login" className="block w-full">
-                    <Button className="w-full h-12 font-bold neon-glow">Sign In with Admin Account</Button>
-                  </Link>
-                ) : (
-                  <p className="text-xs leading-relaxed text-muted-foreground text-center">
-                    This account lacks administrative priority. Contact infrastructure support.
-                  </p>
-                )}
+          {!isPrimaryAdmin ? (
+            <CardContent className="space-y-4">
+              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl space-y-2">
+                <p className="text-xs font-bold text-destructive uppercase">Identity Error</p>
+                <code className="block p-3 bg-black/40 rounded text-xs break-all font-mono text-destructive">
+                  {user?.uid || "NOT_LOGGED_IN"}
+                </code>
               </div>
+              {!user && <Link href="/login"><Button className="w-full">Sign In</Button></Link>}
             </CardContent>
           ) : (
             <form onSubmit={handleSimpleLogin}>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="username" className="text-white">Admin ID</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input 
-                      id="username"
-                      value={usernameInput}
-                      onChange={(e) => setUsernameInput(e.target.value)}
-                      placeholder="Enter admin ID"
-                      className="pl-10 bg-background/50 border-white/10 h-12 text-white"
-                    />
-                  </div>
+                  <Label>Admin ID</Label>
+                  <Input value={usernameInput} onChange={(e) => setUsernameInput(e.target.value)} placeholder="Username" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-white">Security Key</Label>
-                  <div className="relative">
-                    <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input 
-                      id="password"
-                      type="password"
-                      value={passwordInput}
-                      onChange={(e) => setPasswordInput(e.target.value)}
-                      placeholder="••••••••"
-                      className="pl-10 bg-background/50 border-white/10 h-12 text-white"
-                    />
-                  </div>
+                  <Label>Security Key</Label>
+                  <Input type="password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} placeholder="••••••••" />
                 </div>
               </CardContent>
-              <CardFooter className="pt-2">
-                <Button type="submit" className="w-full h-14 text-lg font-bold neon-glow rounded-xl">
-                  <LogIn className="mr-2 w-5 h-5" /> Unlock Dashboard
-                </Button>
+              <CardFooter>
+                <Button type="submit" className="w-full neon-glow">Unlock Dashboard</Button>
               </CardFooter>
             </form>
           )}
