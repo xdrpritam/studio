@@ -5,6 +5,7 @@ service cloud.firestore {
     
     // 1. PRIMARY ADMIN OVERRIDE
     // This grants total recursive access to your specific UID across all collections.
+    // match /{allPaths=**} is required for collectionGroup queries to work for admins.
     match /{allPaths=**} {
       allow read, write: if request.auth != null && request.auth.uid == 'gKJKDmDMZmg8RvUT119XStZ7Xpt1';
     }
@@ -22,7 +23,9 @@ service cloud.firestore {
     // 3. UTILITY ACCESS
     // Allow users to check/redeem codes and send inquiries.
     match /redeemCodes/{codeId} {
-      allow read, update: if request.auth != null;
+      allow read: if request.auth != null;
+      // Allow users to update codes to mark them as used
+      allow update: if request.auth != null;
     }
 
     match /contactInquiries/{inquiryId} {
