@@ -1,54 +1,70 @@
-
 import Link from 'next/link';
-import { Shield } from 'lucide-react';
+import { Shield, Mail, Globe, Clock, ShieldCheck } from 'lucide-react';
 
 export function Footer() {
   return (
-    <footer className="border-t border-white/10 bg-card py-12">
+    <footer className="relative z-10 pt-24 pb-12 border-t border-white/5 bg-background/40 backdrop-blur-xl">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-12 pb-16 border-b border-white/5">
+          <div className="md:col-span-5 space-y-6">
             <Link href="/" className="flex items-center gap-2">
-              <Shield className="w-6 h-6 text-primary" />
-              <span className="font-headline text-xl font-bold tracking-tight">UnMac</span>
+              <Shield className="w-8 h-8 text-primary" />
+              <span className="font-headline text-3xl font-black tracking-tighter uppercase italic">
+                <span className="text-primary">Un</span><span className="text-white">Mac</span>
+              </span>
             </Link>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Unblocking digital boundaries. Your reliable partner for MAC address management on supported WiFi networks.
+            <p className="text-muted-foreground text-sm max-w-sm leading-relaxed">
+              A legitimate network device access request portal. Authorized requests only. We mediate between users and network administrators, not bypass security.
             </p>
-          </div>
-          <div>
-            <h4 className="font-bold mb-4">Quick Links</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/unblock" className="hover:text-primary transition-colors">Unblock MAC</Link></li>
-              <li><Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link></li>
-              <li><Link href="/about" className="hover:text-primary transition-colors">About Us</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-bold mb-4">Support</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/faq" className="hover:text-primary transition-colors">FAQ</Link></li>
-              <li><Link href="/contact" className="hover:text-primary transition-colors">Contact Form</Link></li>
-              <li><Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-bold mb-4">Newsletter</h4>
-            <p className="text-sm text-muted-foreground mb-4">Stay updated with our latest network tools.</p>
-            <div className="flex gap-2">
-              <input 
-                type="email" 
-                placeholder="Email address" 
-                className="bg-background border border-border rounded-md px-3 py-2 text-sm w-full outline-none focus:ring-1 focus:ring-primary"
-              />
-              <button className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-bold hover:bg-primary/90 transition-colors">
-                Join
-              </button>
+            <div className="flex items-center gap-4 text-xs font-bold text-primary uppercase tracking-[0.2em]">
+               <span className="flex items-center gap-2"><Globe className="w-4 h-4" /> Pan-India</span>
+               <span className="flex items-center gap-2"><Clock className="w-4 h-4" /> 24/7 Monitoring</span>
             </div>
           </div>
+
+          <div className="md:col-span-2 space-y-6">
+            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Pages</h4>
+            <ul className="space-y-3 text-sm text-muted-foreground font-medium">
+              <li><Link href="/" className="hover:text-primary transition-colors">Home</Link></li>
+              <li><Link href="/unblock" className="hover:text-primary transition-colors">Submit Request</Link></li>
+              <li><Link href="/dashboard" className="hover:text-primary transition-colors">Dashboard</Link></li>
+              <li><Link href="/contact" className="hover:text-primary transition-colors">Contact</Link></li>
+            </ul>
+          </div>
+
+          <div className="md:col-span-2 space-y-6">
+            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Support</h4>
+            <ul className="space-y-3 text-sm text-muted-foreground font-medium">
+              <li><Link href="/faq" className="hover:text-primary transition-colors">FAQ</Link></li>
+              <li><Link href="/#how-it-works" className="hover:text-primary transition-colors">How It Works</Link></li>
+              <li><Link href="/#plans" className="hover:text-primary transition-colors">Plans</Link></li>
+              <li><Link href="/legal" className="hover:text-primary transition-colors">Legal</Link></li>
+            </ul>
+          </div>
+
+          <div className="md:col-span-3 space-y-6">
+            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Contact</h4>
+            <ul className="space-y-3 text-sm text-muted-foreground font-medium">
+              <li className="flex items-center gap-2 hover:text-primary transition-colors">
+                <Mail className="w-4 h-4" /> support@unmac.rf.gd
+              </li>
+              <li className="flex items-center gap-2">
+                <Clock className="w-4 h-4" /> Mon–Sat, 9AM–6PM IST
+              </li>
+              <li className="flex items-center gap-2 text-primary font-bold">
+                <ShieldCheck className="w-4 h-4" /> Official Support Center
+              </li>
+            </ul>
+          </div>
         </div>
-        <div className="mt-12 pt-8 border-t border-white/5 text-center text-xs text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} UnMac. All rights reserved. Supported networks only.</p>
+
+        <div className="pt-12 flex flex-col md:flex-row justify-between items-center gap-6 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+          <p>© {new Date().getFullYear()} UnMac. All rights reserved.</p>
+          <div className="flex gap-8">
+            <Link href="/legal" className="hover:text-white transition-colors">Legal Disclaimer</Link>
+            <Link href="/legal#privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+            <Link href="/contact" className="hover:text-white transition-colors">Contact</Link>
+          </div>
         </div>
       </div>
     </footer>
