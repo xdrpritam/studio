@@ -72,12 +72,14 @@ function PaymentContent() {
         updatedAt: new Date().toISOString(),
       }, { merge: true });
 
-      // Update the original request status to "Unblocked"
+      // Update the original request status to "Unblocked" and plan to "PREMIUM"
       if (requestId) {
         const requestRef = doc(db, 'users', user.uid, 'unblockRequests', requestId);
         updateDocumentNonBlocking(requestRef, {
           status: 'Unblocked',
-          unblockedAt: new Date().toISOString()
+          subscriptionId: 'PREMIUM',
+          unblockedAt: new Date().toISOString(),
+          expirationDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         });
       }
       setStep('success');

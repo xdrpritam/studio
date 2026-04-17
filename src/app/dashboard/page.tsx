@@ -255,7 +255,7 @@ export default function DashboardPage() {
                     <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Trial Upgrade Available</p>
                     <p className="text-xs text-muted-foreground">Get 30 days of high-speed premium access.</p>
                   </div>
-                  <Link href="/unblock">
+                  <Link href={`/payment?requestId=${requestData.id}`}>
                     <Button size="sm" className="bg-primary hover:bg-primary/90 font-bold text-[10px] uppercase h-9">
                       Upgrade Now <ArrowUpCircle className="ml-2 w-4 h-4" />
                     </Button>

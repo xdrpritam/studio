@@ -49,7 +49,11 @@ export default function UnblockPage() {
   }, [user, db]);
 
   const { data: requestsData, isLoading: isRequestsLoading } = useCollection(requestsQuery);
-  const hasExistingRequest = requestsData && requestsData.length > 0;
+  
+  // Only block if there is a Pending or Unblocked request. Expired ones can be replaced.
+  const hasActiveRequest = useMemo(() => {
+    return requestsData && requestsData.some(r => r.status === 'Pending' || r.status === 'Unblocked');
+  }, [requestsData]);
 
   const hasUsedTrial = userProfile?.hasUsedTrial === true;
 
@@ -81,7 +85,7 @@ export default function UnblockPage() {
       return;
     }
 
-    if (hasExistingRequest) {
+    if (hasActiveRequest) {
       toast({
         variant: "destructive",
         title: "Request Limit Reached",
@@ -219,7 +223,7 @@ export default function UnblockPage() {
     );
   }
 
-  if (hasExistingRequest) {
+  if (hasActiveRequest) {
     return (
       <div className="container mx-auto px-4 py-24 text-center">
         <Card className="max-w-xl mx-auto glass-morphism border-primary/20 p-12 space-y-8">
