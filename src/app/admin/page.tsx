@@ -23,7 +23,9 @@ import {
   ChevronRight,
   Search,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Mail,
+  Calendar
 } from 'lucide-react';
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -46,13 +48,19 @@ export default function AdminPage() {
   const [passwordInput, setPasswordInput] = useState('');
   const [isSimpleAuthenticated, setIsSimpleAuthenticated] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [isSeeding, setIsSeeding] = useState(false);
 
   // Redeem Code Creation State
   const [newCode, setNewCode] = useState('');
   const [isMultiUse, setIsMultiUse] = useState(false);
 
   // Queries - Only active if simple auth is passed
+  const usersQuery = useMemoFirebase(() => {
+    if (!user || !isSimpleAuthenticated) return null;
+    return query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+  }, [db, user, isSimpleAuthenticated]);
+
+  const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
+
   const inquiriesQuery = useMemoFirebase(() => {
     if (!user || !isSimpleAuthenticated) return null;
     return query(collection(db, 'contactInquiries'), orderBy('submissionDate', 'desc'));
@@ -197,21 +205,22 @@ export default function AdminPage() {
           </div>
         </header>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
           {[
-            { label: "Network Tasks", value: allRequests?.length || 0, icon: Database, color: "text-primary" },
-            { label: "UTR Verified", value: allPayments?.filter(p => p.status === 'Completed').length || 0, icon: CreditCard, color: "text-secondary" },
-            { label: "Active Vouchers", value: redeemCodes?.length || 0, icon: ShieldCheck, color: "text-primary" },
-            { label: "Unread Inquiries", value: inquiries?.length || 0, icon: MessageSquare, color: "text-secondary" }
+            { label: "Users", value: users?.length || 0, icon: Users, color: "text-primary" },
+            { label: "Network Tasks", value: allRequests?.length || 0, icon: Database, color: "text-secondary" },
+            { label: "UTR Verified", value: allPayments?.filter(p => p.status === 'Completed').length || 0, icon: CreditCard, color: "text-primary" },
+            { label: "Vouchers", value: redeemCodes?.length || 0, icon: ShieldCheck, color: "text-secondary" },
+            { label: "Inquiries", value: inquiries?.length || 0, icon: MessageSquare, color: "text-primary" }
           ].map((stat, i) => (
             <Card key={i} className="glass-card group hover:scale-[1.02] transition-transform">
-              <CardContent className="p-6 flex items-center gap-6">
-                <div className={`w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center shrink-0`}>
-                  <stat.icon className={`w-7 h-7 ${stat.color}`} />
+              <CardContent className="p-6 flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center shrink-0`}>
+                  <stat.icon className={`w-6 h-6 ${stat.color}`} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{stat.label}</p>
-                  <p className="text-3xl font-black font-headline text-white mt-1">{stat.value}</p>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{stat.label}</p>
+                  <p className="text-2xl font-black font-headline text-white">{stat.value}</p>
                 </div>
               </CardContent>
             </Card>
@@ -219,12 +228,66 @@ export default function AdminPage() {
         </div>
 
         <Tabs defaultValue="tasks" className="w-full">
-          <TabsList className="bg-white/5 border border-white/10 p-1 mb-8 h-14 rounded-2xl">
-            <TabsTrigger value="tasks" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-8">Network Tasks</TabsTrigger>
-            <TabsTrigger value="verification" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-8">UTR Verification</TabsTrigger>
-            <TabsTrigger value="vouchers" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-8">Voucher Mgmt</TabsTrigger>
-            <TabsTrigger value="inquiries" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-8">User Support</TabsTrigger>
+          <TabsList className="bg-white/5 border border-white/10 p-1 mb-8 h-14 rounded-2xl overflow-x-auto justify-start">
+            <TabsTrigger value="users" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-6">User Registry</TabsTrigger>
+            <TabsTrigger value="tasks" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-6">Network Tasks</TabsTrigger>
+            <TabsTrigger value="verification" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-6">UTR Verification</TabsTrigger>
+            <TabsTrigger value="vouchers" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-6">Voucher Mgmt</TabsTrigger>
+            <TabsTrigger value="inquiries" className="rounded-xl data-[state=active]:bg-primary data-[state=active]:text-white font-bold h-full px-6">User Support</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="users">
+            <Card className="glass-card overflow-hidden">
+              <div className="p-6 border-b border-white/5 flex justify-between items-center">
+                <CardTitle className="text-xl font-bold">User Database</CardTitle>
+                <div className="relative w-64">
+                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                   <Input placeholder="Search users..." className="pl-10 h-10 bg-black/20 border-white/10 text-xs" />
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-white/5">
+                    <TableRow className="border-white/5">
+                      <TableHead className="font-bold text-xs uppercase">Identity</TableHead>
+                      <TableHead className="font-bold text-xs uppercase">Email</TableHead>
+                      <TableHead className="font-bold text-xs uppercase">Role</TableHead>
+                      <TableHead className="font-bold text-xs uppercase">Joined</TableHead>
+                      <TableHead className="text-right font-bold text-xs uppercase">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isUsersLoading ? (
+                      <TableRow><TableCell colSpan={5} className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
+                    ) : users?.length === 0 ? (
+                      <TableRow><TableCell colSpan={5} className="text-center py-20 text-muted-foreground">No users found.</TableCell></TableRow>
+                    ) : users?.map((u) => (
+                      <TableRow key={u.id} className="border-white/5 hover:bg-white/[0.02]">
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-white">{u.firstName} {u.lastName}</span>
+                            <span className="text-[10px] text-muted-foreground font-mono">{u.id}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs">{u.email}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-[10px] uppercase border-primary/30 text-primary">
+                            {u.role || 'User'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                           <Button variant="ghost" size="sm" className="text-xs font-bold hover:text-primary">Manage</Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
+          </TabsContent>
 
           <TabsContent value="tasks">
             <Card className="glass-card overflow-hidden">

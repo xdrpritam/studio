@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -7,7 +8,11 @@
       "properties": {
         "id": { "type": "string" },
         "email": { "type": "string", "format": "email" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "email", "createdAt"]
     },
@@ -23,7 +28,8 @@
         "wifiProvider": { "type": "string" },
         "wifiName": { "type": "string" },
         "requestDate": { "type": "string", "format": "date-time" },
-        "status": { "type": "string" },
+        "expirationDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["Pending", "Unblocked", "Expired"] },
         "subscriptionId": { "type": "string" }
       },
       "required": ["id", "userId", "macAddress", "wifiProvider", "requestDate", "status"]
@@ -53,6 +59,10 @@
     "/users/{userId}/unblockRequests/{requestId}": {
       "schema": { "$ref": "#/entities/UnblockRequest" },
       "description": "Stores MAC unblock requests."
+    },
+    "/users/{userId}/payments/{paymentId}": {
+      "schema": { "type": "object" },
+      "description": "Stores user payment history."
     },
     "/redeemCodes/{codeId}": {
       "schema": { "$ref": "#/entities/RedeemCode" },
