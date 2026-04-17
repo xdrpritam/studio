@@ -1,13 +1,13 @@
 
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Shield, ArrowRight, CheckCircle2, Wifi, Tablet, Tag, CreditCard, Clock, Lock, Loader2 } from 'lucide-react';
+import { Shield, ArrowRight, CheckCircle2, Wifi, Tablet, Tag, CreditCard, Clock, Lock, Loader2, AlertCircle, LayoutDashboard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -15,8 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { useUser, useFirestore } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { doc, collection } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
@@ -34,6 +34,15 @@ export default function UnblockPage() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const [loading, setLoading] = useState(false);
+
+  // Check for existing requests to enforce "one request per user" rule
+  const requestsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'users', user.uid, 'unblockRequests');
+  }, [user, db]);
+
+  const { data: requestsData, isLoading: isRequestsLoading } = useCollection(requestsQuery);
+  const hasExistingRequest = requestsData && requestsData.length > 0;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -63,12 +72,21 @@ export default function UnblockPage() {
       return;
     }
 
+    if (hasExistingRequest) {
+      toast({
+        variant: "destructive",
+        title: "Request Limit Reached",
+        description: "You already have an active unblock request. Please manage it from your dashboard.",
+      });
+      return;
+    }
+
     setLoading(true);
     
     const requestId = `REQ_${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
     const requestRef = doc(db, 'users', user.uid, 'unblockRequests', requestId);
 
-    // Trial is set to exactly 1 hour (3600 seconds)
+    // Trial is set to exactly 1 hour
     const trialDurationMs = 60 * 60 * 1000;
     const paidDurationMs = 30 * 24 * 60 * 60 * 1000;
 
@@ -105,10 +123,11 @@ export default function UnblockPage() {
     }, 1500);
   }
 
-  if (isUserLoading) {
+  if (isUserLoading || isRequestsLoading) {
     return (
-      <div className="container mx-auto px-4 py-32 flex justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="container mx-auto px-4 py-32 flex flex-col items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground animate-pulse">Checking infrastructure status...</p>
       </div>
     );
   }
@@ -136,6 +155,30 @@ export default function UnblockPage() {
               </Button>
             </Link>
           </div>
+        </Card>
+      </div>
+    );
+  }
+
+  if (hasExistingRequest) {
+    return (
+      <div className="container mx-auto px-4 py-24 text-center">
+        <Card className="max-w-xl mx-auto glass-morphism border-primary/20 p-12 space-y-8">
+          <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mx-auto neon-glow">
+            <CheckCircle2 className="w-10 h-10 text-primary" />
+          </div>
+          <div className="space-y-4">
+            <h1 className="text-4xl font-black font-headline tracking-tighter">Already <span className="text-primary">Submitted</span></h1>
+            <p className="text-muted-foreground text-lg">You have already submitted an unblocking request for your device. To ensure network stability, our infrastructure currently supports one active unblock task per account.</p>
+          </div>
+          <div className="pt-4">
+            <Link href="/dashboard">
+              <Button size="lg" className="h-16 px-12 text-xl font-black rounded-2xl neon-glow w-full flex items-center justify-center gap-3">
+                <LayoutDashboard className="w-6 h-6" /> Go to Dashboard
+              </Button>
+            </Link>
+          </div>
+          <p className="text-xs text-muted-foreground">If you need to unblock another device, please contact support or wait for your current session to expire.</p>
         </Card>
       </div>
     );
@@ -306,6 +349,10 @@ export default function UnblockPage() {
                 <div className="flex gap-3">
                   <Shield className="w-5 h-5 text-primary shrink-0" />
                   <p>Our backend validates your MAC address format and verifies the connection with the selected provider.</p>
+                </div>
+                <div className="flex gap-3 pt-2">
+                   <AlertCircle className="w-5 h-5 text-secondary shrink-0" />
+                   <p className="text-xs italic">Only one active request is allowed per account to maintain infrastructure integrity.</p>
                 </div>
               </CardContent>
             </Card>
