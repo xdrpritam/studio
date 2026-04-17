@@ -3,12 +3,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Allow any authenticated user to read/write for now to bypass complex UID checks and support Admin Panel sync
+    // Proto-ready security: Allow all authenticated users to read and write all collections.
+    // This supports global collectionGroup queries used in the Admin Terminal.
     match /{allPaths=**} {
       allow read, write: if request.auth != null;
     }
 
-    // fallback for contact inquiries (public)
+    // Support public contact inquiries
     match /contactInquiries/{inquiryId} {
       allow create: if true;
     }

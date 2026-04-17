@@ -2,7 +2,7 @@
 "use client";
 
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, orderBy, collectionGroup } from 'firebase/firestore';
+import { doc, collection, query, collectionGroup } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -20,9 +20,10 @@ import {
   Search,
   CheckCircle2,
   XCircle,
-  Timer
+  Timer,
+  RefreshCcw
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,36 +49,34 @@ export default function AdminPage() {
   const [newCode, setNewCode] = useState('');
   const [isMultiUse, setIsMultiUse] = useState(false);
 
-  // Queries - Only active if simple auth is passed
+  // 1. Queries - OrderBy removed to avoid index requirements in prototype
   const usersQuery = useMemoFirebase(() => {
     if (!user || !isSimpleAuthenticated) return null;
-    return query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+    return collection(db, 'users');
   }, [db, user, isSimpleAuthenticated]);
 
-  const { data: users, isLoading: isUsersLoading } = useCollection(usersQuery);
+  const { data: usersData, isLoading: isUsersLoading } = useCollection(usersQuery);
 
   const inquiriesQuery = useMemoFirebase(() => {
     if (!user || !isSimpleAuthenticated) return null;
-    return query(collection(db, 'contactInquiries'), orderBy('submissionDate', 'desc'));
+    return collection(db, 'contactInquiries');
   }, [db, user, isSimpleAuthenticated]);
 
-  const { data: inquiries, isLoading: isInquiriesLoading } = useCollection(inquiriesQuery);
+  const { data: inquiriesData, isLoading: isInquiriesLoading } = useCollection(inquiriesQuery);
 
-  // Removed orderBy from collectionGroup to avoid index requirement
   const allRequestsQuery = useMemoFirebase(() => {
     if (!user || !isSimpleAuthenticated) return null;
     return collectionGroup(db, 'unblockRequests');
   }, [db, user, isSimpleAuthenticated]);
 
-  const { data: allRequests, isLoading: isRequestsLoading } = useCollection(allRequestsQuery);
+  const { data: allRequestsData, isLoading: isRequestsLoading } = useCollection(allRequestsQuery);
 
-  // Removed orderBy from collectionGroup to avoid index requirement
   const allPaymentsQuery = useMemoFirebase(() => {
     if (!user || !isSimpleAuthenticated) return null;
     return collectionGroup(db, 'payments');
   }, [db, user, isSimpleAuthenticated]);
 
-  const { data: allPayments, isLoading: isPaymentsLoading } = useCollection(allPaymentsQuery);
+  const { data: allPaymentsData, isLoading: isPaymentsLoading } = useCollection(allPaymentsQuery);
 
   const redeemCodesQuery = useMemoFirebase(() => {
     if (!user || !isSimpleAuthenticated) return null;
@@ -85,6 +84,27 @@ export default function AdminPage() {
   }, [db, user, isSimpleAuthenticated]);
 
   const { data: redeemCodes, isLoading: isCodesLoading } = useCollection(redeemCodesQuery);
+
+  // 2. Client-side Sorting
+  const sortedUsers = useMemo(() => {
+    if (!usersData) return [];
+    return [...usersData].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  }, [usersData]);
+
+  const sortedInquiries = useMemo(() => {
+    if (!inquiriesData) return [];
+    return [...inquiriesData].sort((a, b) => new Date(b.submissionDate || 0).getTime() - new Date(a.submissionDate || 0).getTime());
+  }, [inquiriesData]);
+
+  const sortedRequests = useMemo(() => {
+    if (!allRequestsData) return [];
+    return [...allRequestsData].sort((a, b) => new Date(b.requestDate || 0).getTime() - new Date(a.requestDate || 0).getTime());
+  }, [allRequestsData]);
+
+  const sortedPayments = useMemo(() => {
+    if (!allPaymentsData) return [];
+    return [...allPaymentsData].sort((a, b) => new Date(b.paymentDate || 0).getTime() - new Date(a.paymentDate || 0).getTime());
+  }, [allPaymentsData]);
 
   const handleSimpleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,7 +153,7 @@ export default function AdminPage() {
 
     toast({
       title: "Payment Verified",
-      description: "User subscription has been activated.",
+      description: "User subscription and MAC status updated.",
     });
     setProcessingId(null);
   };
@@ -204,11 +224,11 @@ export default function AdminPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
           {[
-            { label: "Users", value: users?.length || 0, icon: Users, color: "text-primary" },
-            { label: "Network Tasks", value: allRequests?.length || 0, icon: Database, color: "text-secondary" },
-            { label: "UTR Pending", value: allPayments?.filter(p => p.status === 'Pending').length || 0, icon: Timer, color: "text-orange-500" },
+            { label: "Users", value: sortedUsers.length, icon: Users, color: "text-primary" },
+            { label: "Network Tasks", value: sortedRequests.length, icon: Database, color: "text-secondary" },
+            { label: "UTR Pending", value: sortedPayments.filter(p => p.status === 'Pending').length, icon: Timer, color: "text-orange-500" },
             { label: "Vouchers", value: redeemCodes?.length || 0, icon: ShieldCheck, color: "text-secondary" },
-            { label: "Inquiries", value: inquiries?.length || 0, icon: MessageSquare, color: "text-primary" }
+            { label: "Inquiries", value: sortedInquiries.length, icon: MessageSquare, color: "text-primary" }
           ].map((stat, i) => (
             <Card key={i} className="glass-card group hover:scale-[1.02] transition-transform">
               <CardContent className="p-6 flex items-center gap-4">
@@ -237,7 +257,7 @@ export default function AdminPage() {
             <Card className="glass-card overflow-hidden">
               <div className="p-6 border-b border-white/5 flex flex-col gap-2">
                 <CardTitle className="text-xl font-bold">UTR Approval Queue</CardTitle>
-                <CardDescription>Manually verify transaction IDs from payment apps. Items appear here immediately after user submission.</CardDescription>
+                <CardDescription>Verify 12-digit transaction IDs. Items appear here immediately after user submission.</CardDescription>
               </div>
               <div className="overflow-x-auto">
                 <Table>
@@ -253,9 +273,9 @@ export default function AdminPage() {
                   <TableBody>
                     {isPaymentsLoading ? (
                       <TableRow><TableCell colSpan={5} className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
-                    ) : allPayments?.filter(p => p.paymentMethod === 'UPI').length === 0 ? (
+                    ) : sortedPayments.filter(p => p.paymentMethod === 'UPI').length === 0 ? (
                       <TableRow><TableCell colSpan={5} className="text-center py-20 text-muted-foreground">Queue is empty. No UPI payments logged yet.</TableCell></TableRow>
-                    ) : allPayments?.filter(p => p.paymentMethod === 'UPI').map((pay) => (
+                    ) : sortedPayments.filter(p => p.paymentMethod === 'UPI').map((pay) => (
                       <TableRow key={pay.id} className="border-white/5 hover:bg-white/[0.02]">
                         <TableCell className="text-xs">{pay.paymentDate ? new Date(pay.paymentDate).toLocaleDateString() : 'N/A'}</TableCell>
                         <TableCell className="font-mono font-bold text-primary">{pay.transactionId}</TableCell>
@@ -312,9 +332,9 @@ export default function AdminPage() {
                   <TableBody>
                     {isUsersLoading ? (
                       <TableRow><TableCell colSpan={5} className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
-                    ) : users?.length === 0 ? (
+                    ) : sortedUsers.length === 0 ? (
                       <TableRow><TableCell colSpan={5} className="text-center py-20 text-muted-foreground">No users found.</TableCell></TableRow>
-                    ) : users?.map((u) => (
+                    ) : sortedUsers.map((u) => (
                       <TableRow key={u.id} className="border-white/5 hover:bg-white/[0.02]">
                         <TableCell>
                           <div className="flex flex-col">
@@ -365,9 +385,9 @@ export default function AdminPage() {
                   <TableBody>
                     {isRequestsLoading ? (
                       <TableRow><TableCell colSpan={5} className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
-                    ) : allRequests?.length === 0 ? (
+                    ) : sortedRequests.length === 0 ? (
                       <TableRow><TableCell colSpan={5} className="text-center py-20 text-muted-foreground">No tasks found.</TableCell></TableRow>
-                    ) : allRequests?.map((req) => (
+                    ) : sortedRequests.map((req) => (
                       <TableRow key={req.id} className="border-white/5 hover:bg-white/[0.02]">
                         <TableCell className="text-xs font-mono text-muted-foreground">{req.requestDate ? new Date(req.requestDate).toLocaleString() : 'N/A'}</TableCell>
                         <TableCell>
@@ -501,9 +521,9 @@ export default function AdminPage() {
                 <TableBody>
                   {isInquiriesLoading ? (
                     <TableRow><TableCell colSpan={4} className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
-                  ) : inquiries?.length === 0 ? (
+                  ) : sortedInquiries.length === 0 ? (
                     <TableRow><TableCell colSpan={4} className="text-center py-20 text-muted-foreground">No inquiries found.</TableCell></TableRow>
-                  ) : inquiries?.map((inq) => (
+                  ) : sortedInquiries.map((inq) => (
                     <TableRow key={inq.id} className="border-white/5 hover:bg-white/[0.02]">
                       <TableCell className="text-xs text-muted-foreground">{inq.submissionDate ? new Date(inq.submissionDate).toLocaleDateString() : 'N/A'}</TableCell>
                       <TableCell>
@@ -532,7 +552,7 @@ export default function AdminPage() {
       <div className="w-full max-w-lg space-y-12 text-center">
         <div className="space-y-4">
            <h1 className="text-5xl font-black font-headline tracking-tighter">Terminal <span className="text-primary neon-text">Lock</span></h1>
-           <p className="text-muted-foreground text-lg">Administrative authorization is required to access the core infrastructure management systems.</p>
+           <p className="text-muted-foreground text-lg">Administrative authorization is required to access core systems.</p>
         </div>
 
         <Card className="glass-morphism border-white/10 p-8">
@@ -552,7 +572,7 @@ export default function AdminPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Security Phrase</Label>
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Security Key</Label>
                 <Input 
                   type="password" 
                   value={passwordInput} 
@@ -566,7 +586,7 @@ export default function AdminPage() {
             {!user && (
               <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl flex items-start gap-3 text-sm text-destructive">
                 <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
-                <p>Authentication Required: Please <Link href="/login" className="font-bold underline">Login</Link> to your UnMac account before entering terminal credentials.</p>
+                <p>Authentication Required: Please <Link href="/login" className="font-bold underline">Login</Link> to your account first.</p>
               </div>
             )}
 

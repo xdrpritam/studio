@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Clock, Shield, Wifi, RefreshCcw, Smartphone, Zap, AlertTriangle, ArrowU
 import { TroubleshootingAssistant } from '@/components/TroubleshootingAssistant';
 import { Progress } from '@/components/ui/progress';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, limit, where } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 
 export default function DashboardPage() {
   const { user, isUserLoading } = useUser();
@@ -18,31 +18,30 @@ export default function DashboardPage() {
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [progress, setProgress] = useState(0);
 
-  // 1. Fetch latest unblock request
+  // 1. Fetch unblock requests (client-side sorting to avoid indexing requirements)
   const requestsQuery = useMemoFirebase(() => {
     if (!user) return null;
-    return query(
-      collection(db, 'users', user.uid, 'unblockRequests'),
-      orderBy('requestDate', 'desc'),
-      limit(1)
-    );
+    return collection(db, 'users', user.uid, 'unblockRequests');
   }, [user, db]);
 
-  const { data: requests, isLoading: isRequestsLoading } = useCollection(requestsQuery);
-  const requestData = requests && requests.length > 0 ? requests[0] : null;
+  const { data: requestsData, isLoading: isRequestsLoading } = useCollection(requestsQuery);
+  
+  const requestData = useMemo(() => {
+    if (!requestsData || requestsData.length === 0) return null;
+    return [...requestsData].sort((a, b) => new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime())[0];
+  }, [requestsData]);
 
   // 2. Fetch associated payment
   const paymentsQuery = useMemoFirebase(() => {
     if (!user || !requestData) return null;
     return query(
       collection(db, 'users', user.uid, 'payments'),
-      where('requestId', '==', requestData.id),
-      limit(1)
+      where('requestId', '==', requestData.id)
     );
   }, [user, db, requestData]);
 
-  const { data: payments, isLoading: isPaymentsLoading } = useCollection(paymentsQuery);
-  const paymentData = payments && payments.length > 0 ? payments[0] : null;
+  const { data: paymentsData, isLoading: isPaymentsLoading } = useCollection(paymentsQuery);
+  const paymentData = paymentsData && paymentsData.length > 0 ? paymentsData[0] : null;
 
   // Manual Console Override: If payment is marked "Completed" in console, treat request as "Unblocked"
   const isManuallyApproved = requestData?.status === 'Pending' && paymentData?.status === 'Completed';
