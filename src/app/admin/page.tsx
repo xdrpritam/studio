@@ -165,6 +165,34 @@ export default function AdminPage() {
     setProcessingId(null);
   };
 
+  const handleDeleteUser = (userId: string) => {
+    if (!confirm("Are you sure? This will delete the user profile from the database.")) return;
+    const userRef = doc(db, 'users', userId);
+    deleteDocumentNonBlocking(userRef);
+    toast({ title: "User Purged", description: "Record has been removed." });
+  };
+
+  const handleDeleteRequest = (userId: string, requestId: string) => {
+    if (!confirm("Delete this network task?")) return;
+    const ref = doc(db, 'users', userId, 'unblockRequests', requestId);
+    deleteDocumentNonBlocking(ref);
+    toast({ title: "Task Deleted" });
+  };
+
+  const handleDeletePayment = (userId: string, paymentId: string) => {
+    if (!confirm("Delete this payment log?")) return;
+    const ref = doc(db, 'users', userId, 'payments', paymentId);
+    deleteDocumentNonBlocking(ref);
+    toast({ title: "Log Deleted" });
+  };
+
+  const handleDeleteInquiry = (inquiryId: string) => {
+    if (!confirm("Delete this support message?")) return;
+    const ref = doc(db, 'contactInquiries', inquiryId);
+    deleteDocumentNonBlocking(ref);
+    toast({ title: "Message Deleted" });
+  };
+
   const handleCreateCode = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCode) return;
@@ -311,20 +339,30 @@ export default function AdminPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          {pay.status === 'Pending' ? (
+                           <div className="flex justify-end items-center gap-2">
+                            {pay.status === 'Pending' ? (
+                              <Button 
+                                size="sm" 
+                                onClick={() => handleApprovePayment(pay)} 
+                                disabled={processingId === pay.id}
+                                className="bg-primary hover:bg-primary/80 font-bold"
+                              >
+                                {processingId === pay.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify & Activate"}
+                              </Button>
+                            ) : (
+                              <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3" /> Fully Verified
+                              </span>
+                            )}
                             <Button 
-                              size="sm" 
-                              onClick={() => handleApprovePayment(pay)} 
-                              disabled={processingId === pay.id}
-                              className="bg-primary hover:bg-primary/80 font-bold"
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleDeletePayment(pay.userId, pay.id)}
+                              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                             >
-                              {processingId === pay.id ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify & Activate"}
+                              <Trash2 className="w-4 h-4" />
                             </Button>
-                          ) : (
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center justify-end gap-1">
-                              <CheckCircle2 className="w-3 h-3" /> Fully Verified
-                            </span>
-                          )}
+                           </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -377,17 +415,27 @@ export default function AdminPage() {
                           {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}
                         </TableCell>
                         <TableCell className="text-right">
-                           <Button 
-                             variant="ghost" 
-                             size="sm" 
-                             className="text-xs font-bold hover:text-primary gap-1.5"
-                             onClick={() => {
-                               setEditingUser(u);
-                               setIsEditDialogOpen(true);
-                             }}
-                           >
-                             <Edit className="w-3 h-3" /> Edit
-                           </Button>
+                           <div className="flex justify-end gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-xs font-bold hover:text-primary gap-1.5"
+                              onClick={() => {
+                                setEditingUser(u);
+                                setIsEditDialogOpen(true);
+                              }}
+                            >
+                              <Edit className="w-3 h-3" /> Edit
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => handleDeleteUser(u.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                           </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -466,13 +514,14 @@ export default function AdminPage() {
                       <TableHead className="font-bold text-xs uppercase">Infrastructure</TableHead>
                       <TableHead className="font-bold text-xs uppercase">Plan</TableHead>
                       <TableHead className="font-bold text-xs uppercase">Status</TableHead>
+                      <TableHead className="text-right font-bold text-xs uppercase">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isRequestsLoading ? (
-                      <TableRow><TableCell colSpan={5} className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
+                      <TableRow><TableCell colSpan={6} className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
                     ) : sortedRequests.length === 0 ? (
-                      <TableRow><TableCell colSpan={5} className="text-center py-20 text-muted-foreground">No tasks found.</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={6} className="text-center py-20 text-muted-foreground">No tasks found.</TableCell></TableRow>
                     ) : sortedRequests.map((req) => (
                       <TableRow key={req.id} className="border-white/5 hover:bg-white/[0.02]">
                         <TableCell className="text-xs font-mono text-muted-foreground">{req.requestDate ? new Date(req.requestDate).toLocaleString() : 'N/A'}</TableCell>
@@ -502,6 +551,16 @@ export default function AdminPage() {
                              )}
                              <span className={`text-xs font-bold uppercase ${req.status === 'Unblocked' ? 'text-primary' : 'text-orange-500'}`}>{req.status}</span>
                           </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => handleDeleteRequest(req.userId, req.id)}
+                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -620,7 +679,17 @@ export default function AdminPage() {
                       </TableCell>
                       <TableCell className="text-xs">{inq.subject}</TableCell>
                       <TableCell className="text-right">
-                         <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10">Details <ChevronRight className="ml-1 w-4 h-4" /></Button>
+                         <div className="flex justify-end items-center gap-1">
+                          <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10">Details <ChevronRight className="ml-1 w-4 h-4" /></Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => handleDeleteInquiry(inq.id)}
+                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                         </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -687,4 +756,3 @@ export default function AdminPage() {
     </div>
   );
 }
-    
