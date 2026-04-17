@@ -3,8 +3,8 @@
   publish = ".next"
 
 [functions]
-  # Increase timeout for Genkit AI operations if needed
-  timeout = 20
+  # Increase timeout for Genkit AI operations and other server-side tasks
+  timeout = 60
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"

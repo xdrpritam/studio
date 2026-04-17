@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { 
   ArrowRight, 
   CheckCircle2, 
@@ -176,7 +177,9 @@ export default function Home() {
 
           {/* Priority Plan */}
           <div className="glass-card p-8 md:p-12 rounded-[2rem] md:rounded-[3rem] space-y-8 flex flex-col border-primary/30 relative">
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-accent text-white px-6 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-full shadow-lg">⚡ Most Popular</div>
+            <Badge className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-primary to-accent text-white px-6 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-full shadow-lg h-auto">
+              ⚡ Most Popular
+            </Badge>
             <div className="space-y-4">
               <h4 className="text-xl font-bold text-primary">Priority Plan</h4>
               <div className="flex items-baseline gap-1">

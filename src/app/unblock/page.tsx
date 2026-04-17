@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -7,7 +6,7 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Shield, ArrowRight, CheckCircle2, Wifi, Tablet, Tag, CreditCard, Clock, Lock, Loader2, AlertCircle, LayoutDashboard, Star } from 'lucide-react';
+import { Shield, ArrowRight, CheckCircle2, Wifi, Tablet, Tag, CreditCard, Clock, Lock, Loader2, AlertCircle, LayoutDashboard, Star, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -18,6 +17,7 @@ import { toast } from '@/hooks/use-toast';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { doc, collection, getDoc } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
 
@@ -234,7 +234,17 @@ export default function UnblockPage() {
                         name="macAddress"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="flex items-center gap-2"><Shield className="w-4 h-4 text-primary" /> MAC Address</FormLabel>
+                            <FormLabel className="flex items-center gap-2">
+                              <Shield className="w-4 h-4 text-primary" /> MAC Address
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild><Info className="w-3.5 h-3.5 text-muted-foreground cursor-help" /></TooltipTrigger>
+                                  <TooltipContent className="max-w-xs p-3">
+                                    <p className="text-xs">Find this in your Device Settings {'>'} About {'>'} Status {'>'} WiFi MAC Address.</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </FormLabel>
                             <FormControl>
                               <Input 
                                 placeholder="00:1A:2B:3C:4D:5E" 
