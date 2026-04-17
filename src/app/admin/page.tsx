@@ -1,12 +1,12 @@
 
 "use client";
 
-import { useUser, useDoc, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, orderBy, collectionGroup, writeBatch } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Lock, Zap, Wifi, User, Key, LogIn, ShieldAlert, AlertCircle, Loader2, CreditCard, ShieldCheck, Plus, Ticket, Trash2, Database } from 'lucide-react';
+import { Lock, Database, Trash2, Loader2, ShieldCheck, ShieldAlert, AlertCircle, Info } from 'lucide-react';
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,6 @@ import { toast } from '@/hooks/use-toast';
 import { updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import Link from 'next/link';
 
-const HARDCODED_ADMIN_UID = 'gKJKDmDMZmg8RvUT119XStZ7Xpt1';
 const ADMIN_USERNAME = 'pd863253';
 const ADMIN_PASSWORD = 'sd7gen3';
 
@@ -35,35 +34,32 @@ export default function AdminPage() {
   const [newCode, setNewCode] = useState('');
   const [isMultiUse, setIsMultiUse] = useState(false);
 
-  // A user is an admin if they are the hardcoded primary admin.
-  const isPrimaryAdmin = user?.uid === HARDCODED_ADMIN_UID;
-
-  // Queries - Only active if simple auth is passed AND user is primary admin
+  // Queries - Only active if simple auth is passed
   const inquiriesQuery = useMemoFirebase(() => {
-    if (!user || !isPrimaryAdmin || !isSimpleAuthenticated) return null;
+    if (!user || !isSimpleAuthenticated) return null;
     return query(collection(db, 'contactInquiries'), orderBy('submissionDate', 'desc'));
-  }, [db, user, isPrimaryAdmin, isSimpleAuthenticated]);
+  }, [db, user, isSimpleAuthenticated]);
 
   const { data: inquiries, isLoading: isInquiriesLoading } = useCollection(inquiriesQuery);
 
   const allRequestsQuery = useMemoFirebase(() => {
-    if (!user || !isPrimaryAdmin || !isSimpleAuthenticated) return null;
+    if (!user || !isSimpleAuthenticated) return null;
     return query(collectionGroup(db, 'unblockRequests'), orderBy('requestDate', 'desc'));
-  }, [db, user, isPrimaryAdmin, isSimpleAuthenticated]);
+  }, [db, user, isSimpleAuthenticated]);
 
   const { data: allRequests, isLoading: isRequestsLoading } = useCollection(allRequestsQuery);
 
   const allPaymentsQuery = useMemoFirebase(() => {
-    if (!user || !isPrimaryAdmin || !isSimpleAuthenticated) return null;
+    if (!user || !isSimpleAuthenticated) return null;
     return query(collectionGroup(db, 'payments'), orderBy('paymentDate', 'desc'));
-  }, [db, user, isPrimaryAdmin, isSimpleAuthenticated]);
+  }, [db, user, isSimpleAuthenticated]);
 
   const { data: allPayments, isLoading: isPaymentsLoading } = useCollection(allPaymentsQuery);
 
   const redeemCodesQuery = useMemoFirebase(() => {
-    if (!user || !isPrimaryAdmin || !isSimpleAuthenticated) return null;
+    if (!user || !isSimpleAuthenticated) return null;
     return collection(db, 'redeemCodes');
-  }, [db, user, isPrimaryAdmin, isSimpleAuthenticated]);
+  }, [db, user, isSimpleAuthenticated]);
 
   const { data: redeemCodes, isLoading: isCodesLoading } = useCollection(redeemCodesQuery);
 
@@ -192,7 +188,7 @@ export default function AdminPage() {
     );
   }
 
-  if (isSimpleAuthenticated && isPrimaryAdmin) {
+  if (isSimpleAuthenticated) {
     return (
       <div className="container mx-auto px-4 py-16 space-y-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -202,7 +198,7 @@ export default function AdminPage() {
             </div>
             <div>
               <h1 className="text-3xl font-bold font-headline text-white">Admin Console</h1>
-              <p className="text-muted-foreground">Identity Verified: <span className="text-primary font-mono text-xs">{user?.uid}</span></p>
+              <p className="text-muted-foreground">Session Active: <span className="text-primary font-mono text-xs">{ADMIN_USERNAME}</span></p>
             </div>
           </div>
           <div className="flex gap-2">
@@ -402,39 +398,33 @@ export default function AdminPage() {
         <Card className="glass-morphism border-white/10">
           <CardHeader className="text-center">
             <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-              {!isPrimaryAdmin ? <ShieldAlert className="w-8 h-8 text-destructive" /> : <Lock className="w-8 h-8 text-primary" />}
+              <Lock className="w-8 h-8 text-primary" />
             </div>
-            <CardTitle>{!isPrimaryAdmin ? "Access Restricted" : "Secure Auth"}</CardTitle>
-            <CardDescription>{!isPrimaryAdmin ? "Unauthorized session detected" : "Enter management credentials"}</CardDescription>
+            <CardTitle>Management Auth</CardTitle>
+            <CardDescription>Enter security credentials to access the console</CardDescription>
           </CardHeader>
           
-          {!isPrimaryAdmin ? (
+          <form onSubmit={handleSimpleLogin}>
             <CardContent className="space-y-4">
-              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-xl space-y-2">
-                <p className="text-xs font-bold text-destructive uppercase">Identity Error</p>
-                <code className="block p-3 bg-black/40 rounded text-xs break-all font-mono text-destructive">
-                  {user?.uid || "NOT_LOGGED_IN"}
-                </code>
+              <div className="space-y-2">
+                <Label>Admin ID</Label>
+                <Input value={usernameInput} onChange={(e) => setUsernameInput(e.target.value)} placeholder="Username" />
               </div>
-              {!user && <Link href="/login"><Button className="w-full">Sign In</Button></Link>}
+              <div className="space-y-2">
+                <Label>Security Key</Label>
+                <Input type="password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} placeholder="••••••••" />
+              </div>
+              {!user && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-2 text-xs text-destructive">
+                   <ShieldAlert className="w-4 h-4" /> Please log in to your account first.
+                </div>
+              )}
             </CardContent>
-          ) : (
-            <form onSubmit={handleSimpleLogin}>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Admin ID</Label>
-                  <Input value={usernameInput} onChange={(e) => setUsernameInput(e.target.value)} placeholder="Username" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Security Key</Label>
-                  <Input type="password" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} placeholder="••••••••" />
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button type="submit" className="w-full neon-glow">Unlock Dashboard</Button>
-              </CardFooter>
-            </form>
-          )}
+            <CardFooter className="flex flex-col gap-4">
+              <Button type="submit" disabled={!user} className="w-full neon-glow">Unlock Dashboard</Button>
+              {!user && <Link href="/login" className="w-full"><Button variant="outline" className="w-full">Sign In</Button></Link>}
+            </CardFooter>
+          </form>
         </Card>
       </div>
     </div>

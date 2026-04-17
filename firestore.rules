@@ -3,37 +3,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // 1. PRIMARY ADMIN OVERRIDE
-    // This grants total recursive access to your specific UID across all collections.
-    // match /{allPaths=**} is required for collectionGroup queries to work for admins.
+    // allow any authenticated user to read/write for now as per user request to bypass UID checks
     match /{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid == 'gKJKDmDMZmg8RvUT119XStZ7Xpt1';
+      allow read, write: if request.auth != null;
     }
 
-    // 2. USER DATA RULES
-    // Allows users to manage their own profile and sub-collections.
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      
-      match /{allChildren=**} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-      }
-    }
-
-    // 3. UTILITY ACCESS
-    // Allow users to check/redeem codes and send inquiries.
-    match /redeemCodes/{codeId} {
-      allow read: if request.auth != null;
-      // Allow users to update codes to mark them as used
-      allow update: if request.auth != null;
-    }
-
+    // fallback for contact inquiries (public)
     match /contactInquiries/{inquiryId} {
       allow create: if true;
-    }
-
-    match /roles_admin/{uid} {
-      allow read: if request.auth != null;
     }
   }
 }

@@ -3,18 +3,13 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Shield, LayoutDashboard, HelpCircle, PhoneCall, Info, LogOut, User, Lock } from 'lucide-react';
+import { Shield, LayoutDashboard, HelpCircle, PhoneCall, Info, LogOut, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useUser, useAuth, useDoc, useFirestore } from '@/firebase';
-import { doc } from 'firebase/firestore';
-import { useMemoFirebase } from '@/firebase';
-
-const HARDCODED_ADMIN_UID = 'gKJKDmDMZmg8RvUT119XStZ7Xpt1';
+import { useUser, useAuth } from '@/firebase';
 
 export function Navbar() {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
-  const db = useFirestore();
   const [mounted, setMounted] = useState(false);
 
   // Set mounted to true after the component has mounted on the client
@@ -22,15 +17,8 @@ export function Navbar() {
     setMounted(true);
   }, []);
 
-  const adminRef = useMemoFirebase(() => {
-    if (!user) return null;
-    return doc(db, 'roles_admin', user.uid);
-  }, [user, db]);
-
-  const { data: adminData } = useDoc(adminRef);
-  
-  // Only calculate isAdmin and show dynamic auth UI after hydration
-  const isAdmin = mounted ? (!!adminData || user?.uid === HARDCODED_ADMIN_UID) : false;
+  // Show Admin link to all authenticated users; the Admin page itself handles the password check.
+  const isAdminVisible = mounted && !!user;
 
   return (
     <nav className="sticky top-0 z-50 border-b border-white/10 bg-background/80 backdrop-blur-md">
@@ -55,7 +43,7 @@ export function Navbar() {
           <Link href="/contact" className="hover:text-primary transition-colors flex items-center gap-1.5">
             <PhoneCall className="w-4 h-4" /> Contact
           </Link>
-          {isAdmin && (
+          {isAdminVisible && (
             <Link href="/admin" className="text-secondary hover:text-primary transition-colors flex items-center gap-1.5 font-bold">
               <Lock className="w-4 h-4" /> Admin
             </Link>
