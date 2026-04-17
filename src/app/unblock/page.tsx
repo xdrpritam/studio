@@ -42,7 +42,7 @@ export default function UnblockPage() {
   }, [user, db]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc(userProfileRef);
 
-  // 2. Check for active requests to enforce one-at-a-time rule
+  // 2. Check for active requests to enforce one-at-a-time rule for the current user
   const requestsQuery = useMemoFirebase(() => {
     if (!user) return null;
     return collection(db, 'users', user.uid, 'unblockRequests');
@@ -63,9 +63,18 @@ export default function UnblockPage() {
       deviceName: '',
       wifiProvider: 'Jio',
       ssid: '',
-      plan: hasUsedTrial ? 'paid' : 'trial',
+      plan: 'paid', // Default to paid, trial becomes option if available
     },
   });
+
+  // Sync plan choice with trial eligibility
+  useMemo(() => {
+    if (!isProfileLoading && !hasUsedTrial) {
+      form.setValue('plan', 'trial');
+    } else {
+      form.setValue('plan', 'paid');
+    }
+  }, [hasUsedTrial, isProfileLoading, form]);
 
   const formatMacAddress = (value: string) => {
     const hexOnly = value.replace(/[^0-9A-Fa-f]/g, '').slice(0, 12);
@@ -96,8 +105,9 @@ export default function UnblockPage() {
     setLoading(true);
 
     try {
-      // GLOBAL DUPLICATE MAC CHECK
       const macToCheck = values.macAddress.toUpperCase();
+
+      // 1. GLOBAL DUPLICATE MAC CHECK (Using Firestore collectionGroup)
       const globalMacQuery = query(
         collectionGroup(db, 'unblockRequests'),
         where('macAddress', '==', macToCheck),
@@ -116,18 +126,8 @@ export default function UnblockPage() {
         return;
       }
 
-      // GLOBAL TRIAL CHECK (if user is trying to use a trial)
+      // 2. GLOBAL TRIAL CHECK for the specific MAC address
       if (values.plan === 'trial') {
-        if (hasUsedTrial) {
-          toast({
-            variant: "destructive",
-            title: "Trial Limit",
-            description: "Your account has already utilized its free trial.",
-          });
-          setLoading(false);
-          return;
-        }
-
         const globalTrialQuery = query(
           collectionGroup(db, 'unblockRequests'),
           where('macAddress', '==', macToCheck),
@@ -143,63 +143,81 @@ export default function UnblockPage() {
           setLoading(false);
           return;
         }
+
+        // Check if the current user has used a trial (safety fallback)
+        if (hasUsedTrial) {
+          toast({
+            variant: "destructive",
+            title: "Trial Limit",
+            description: "Your account has already utilized its free trial.",
+          });
+          setLoading(false);
+          return;
+        }
       }
-    } catch (error) {
-      console.warn("Global validation check bypassed due to network error", error);
-    }
-    
-    const requestId = `REQ_${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-    const requestRef = doc(db, 'users', user.uid, 'unblockRequests', requestId);
 
-    const trialDurationMs = 60 * 60 * 1000;
-    const paidDurationMs = 30 * 24 * 60 * 60 * 1000;
+      // If all checks pass, proceed with creation
+      const requestId = `REQ_${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      const requestRef = doc(db, 'users', user.uid, 'unblockRequests', requestId);
 
-    const expiresAt = values.plan === 'trial' 
-      ? new Date(Date.now() + trialDurationMs).toISOString() 
-      : new Date(Date.now() + paidDurationMs).toISOString();
+      const trialDurationMs = 60 * 60 * 1000;
+      const paidDurationMs = 30 * 24 * 60 * 60 * 1000;
 
-    const initialStatus = values.plan === 'trial' ? 'Unblocked' : 'Pending';
+      const expiresAt = values.plan === 'trial' 
+        ? new Date(Date.now() + trialDurationMs).toISOString() 
+        : new Date(Date.now() + paidDurationMs).toISOString();
 
-    // Mark trial as used if chosen
-    if (values.plan === 'trial') {
-      updateDocumentNonBlocking(doc(db, 'users', user.uid), {
-        hasUsedTrial: true,
-        updatedAt: new Date().toISOString()
+      const initialStatus = values.plan === 'trial' ? 'Unblocked' : 'Pending';
+
+      // Update user trial status in profile
+      if (values.plan === 'trial') {
+        updateDocumentNonBlocking(doc(db, 'users', user.uid), {
+          hasUsedTrial: true,
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      setDocumentNonBlocking(requestRef, {
+        id: requestId,
+        userId: user.uid,
+        subscriptionId: values.plan === 'trial' ? 'FREE_TRIAL' : 'PREMIUM',
+        macAddress: macToCheck,
+        deviceName: values.deviceName,
+        wifiProvider: values.wifiProvider,
+        wifiName: values.ssid,
+        status: initialStatus,
+        requestDate: new Date().toISOString(),
+        expirationDate: expiresAt,
+      }, { merge: true });
+
+      setTimeout(() => {
+        setLoading(false);
+        if (values.plan === 'paid') {
+          router.push(`/payment?requestId=${requestId}`);
+        } else {
+          toast({
+            title: "Trial Activated!",
+            description: "Your 1-hour trial session has been initialized.",
+          });
+          router.push('/dashboard');
+        }
+      }, 1000);
+
+    } catch (error: any) {
+      setLoading(false);
+      toast({
+        variant: "destructive",
+        title: "System Error",
+        description: "Could not verify hardware status. Please check your connection.",
       });
     }
-
-    setDocumentNonBlocking(requestRef, {
-      id: requestId,
-      userId: user.uid,
-      subscriptionId: values.plan === 'trial' ? 'FREE_TRIAL' : 'PREMIUM',
-      macAddress: values.macAddress.toUpperCase(),
-      deviceName: values.deviceName,
-      wifiProvider: values.wifiProvider,
-      wifiName: values.ssid,
-      status: initialStatus,
-      requestDate: new Date().toISOString(),
-      expirationDate: expiresAt,
-    }, { merge: true });
-
-    setTimeout(() => {
-      setLoading(false);
-      if (values.plan === 'paid') {
-        router.push(`/payment?requestId=${requestId}`);
-      } else {
-        toast({
-          title: "Trial Activated!",
-          description: "Your request has been initialized successfully.",
-        });
-        router.push('/dashboard');
-      }
-    }, 1500);
   }
 
   if (isUserLoading || isRequestsLoading || isProfileLoading) {
     return (
       <div className="container mx-auto px-4 py-32 flex flex-col items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground animate-pulse font-bold text-xs uppercase tracking-widest">Validating...</p>
+        <p className="text-muted-foreground animate-pulse font-bold text-xs uppercase tracking-widest">Accessing Infrastructure...</p>
       </div>
     );
   }
@@ -254,7 +272,7 @@ export default function UnblockPage() {
     <div className="container mx-auto px-4 py-24">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12 space-y-4">
-          <h1 className="font-headline text-4xl md:text-5xl font-bold">Unblock Request</h1>
+          <h1 className="font-headline text-4xl md:text-5xl font-bold">Unblock <span className="text-primary neon-text">Request</span></h1>
           <p className="text-muted-foreground">Submit your device details for network reinstatement.</p>
         </div>
 
@@ -358,7 +376,7 @@ export default function UnblockPage() {
                           <FormControl>
                             <RadioGroup
                               onValueChange={field.onChange}
-                              defaultValue={field.value}
+                              value={field.value}
                               className="grid grid-cols-1 md:grid-cols-2 gap-4"
                             >
                               <FormItem>
@@ -415,10 +433,10 @@ export default function UnblockPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-xs space-y-4 text-muted-foreground leading-relaxed">
-                <p>To ensure network availability for all users, duplicate MAC addresses are strictly monitored.</p>
+                <p>To ensure network availability for all users, hardware IDs are globally monitored via infrastructure logs.</p>
                 <div className="flex gap-3 pt-2">
                    <AlertCircle className="w-5 h-5 text-orange-500 shrink-0" />
-                   <p className="italic">A MAC address already registered in an active session cannot be resubmitted until the existing session expires or is terminated.</p>
+                   <p className="italic">A MAC address already registered in an active session or a previous trial cannot be resubmitted. Database verification is performed before each task.</p>
                 </div>
               </CardContent>
             </Card>
