@@ -50,7 +50,6 @@ export default function UnblockPage() {
 
   const { data: requestsData, isLoading: isRequestsLoading } = useCollection(requestsQuery);
   
-  // Only block if there is a Pending or Unblocked request. Expired ones can be replaced.
   const hasActiveRequest = useMemo(() => {
     return requestsData && requestsData.some(r => r.status === 'Pending' || r.status === 'Unblocked');
   }, [requestsData]);
@@ -94,54 +93,59 @@ export default function UnblockPage() {
       return;
     }
 
-    if (values.plan === 'trial' && hasUsedTrial) {
-      toast({
-        variant: "destructive",
-        title: "Trial Already Used",
-        description: "Your account has already utilized its free trial. Please select the Premium Plan.",
-      });
-      return;
-    }
-
     setLoading(true);
 
     try {
-      // Global validation for MAC duplication
+      // GLOBAL DUPLICATE MAC CHECK
+      const macToCheck = values.macAddress.toUpperCase();
+      const globalMacQuery = query(
+        collectionGroup(db, 'unblockRequests'),
+        where('macAddress', '==', macToCheck),
+        where('status', 'in', ['Pending', 'Unblocked'])
+      );
+      
+      const macSnap = await getDocs(globalMacQuery);
+      
+      if (!macSnap.empty) {
+        toast({
+          variant: "destructive",
+          title: "Registration Error",
+          description: "This MAC address is already registered in an active session.",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // GLOBAL TRIAL CHECK (if user is trying to use a trial)
       if (values.plan === 'trial') {
+        if (hasUsedTrial) {
+          toast({
+            variant: "destructive",
+            title: "Trial Limit",
+            description: "Your account has already utilized its free trial.",
+          });
+          setLoading(false);
+          return;
+        }
+
         const globalTrialQuery = query(
           collectionGroup(db, 'unblockRequests'),
-          where('macAddress', '==', values.macAddress),
+          where('macAddress', '==', macToCheck),
           where('subscriptionId', '==', 'FREE_TRIAL')
         );
         const trialSnap = await getDocs(globalTrialQuery);
         if (!trialSnap.empty) {
           toast({
             variant: "destructive",
-            title: "Hardware Blocked",
+            title: "Hardware Conflict",
             description: "This device hardware has already utilized a trial. Please upgrade to Premium.",
           });
           setLoading(false);
           return;
         }
       }
-
-      const globalActiveQuery = query(
-        collectionGroup(db, 'unblockRequests'),
-        where('macAddress', '==', values.macAddress),
-        where('status', 'in', ['Pending', 'Unblocked'])
-      );
-      const activeSnap = await getDocs(globalActiveQuery);
-      if (!activeSnap.empty) {
-        toast({
-          variant: "destructive",
-          title: "Session Conflict",
-          description: "This device is already being processed in another active session.",
-        });
-        setLoading(false);
-        return;
-      }
     } catch (error) {
-      console.warn("Global validation failed", error);
+      console.warn("Global validation check bypassed due to network error", error);
     }
     
     const requestId = `REQ_${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
@@ -168,7 +172,7 @@ export default function UnblockPage() {
       id: requestId,
       userId: user.uid,
       subscriptionId: values.plan === 'trial' ? 'FREE_TRIAL' : 'PREMIUM',
-      macAddress: values.macAddress,
+      macAddress: values.macAddress.toUpperCase(),
       deviceName: values.deviceName,
       wifiProvider: values.wifiProvider,
       wifiName: values.ssid,
@@ -184,7 +188,7 @@ export default function UnblockPage() {
       } else {
         toast({
           title: "Trial Activated!",
-          description: "Redirecting to your dashboard.",
+          description: "Your request has been initialized successfully.",
         });
         router.push('/dashboard');
       }
@@ -195,7 +199,7 @@ export default function UnblockPage() {
     return (
       <div className="container mx-auto px-4 py-32 flex flex-col items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground animate-pulse font-bold text-xs uppercase tracking-widest">Secure Handshake...</p>
+        <p className="text-muted-foreground animate-pulse font-bold text-xs uppercase tracking-widest">Validating...</p>
       </div>
     );
   }
@@ -231,8 +235,8 @@ export default function UnblockPage() {
             <CheckCircle2 className="w-10 h-10 text-primary" />
           </div>
           <div className="space-y-4">
-            <h1 className="text-4xl font-black font-headline tracking-tighter">Existing <span className="text-primary">Task</span></h1>
-            <p className="text-muted-foreground text-lg">You currently have an active unblock request. Our infrastructure supports one simultaneous session per user.</p>
+            <h1 className="text-4xl font-black font-headline tracking-tighter">Active Session</h1>
+            <p className="text-muted-foreground text-lg">You already have an active unblock request. You can manage it or upgrade to premium from your dashboard.</p>
           </div>
           <div className="pt-4">
             <Link href="/dashboard">
@@ -293,7 +297,7 @@ export default function UnblockPage() {
                               <Tablet className="w-4 h-4 text-primary" /> Device Name
                             </FormLabel>
                             <FormControl>
-                              <Input placeholder="Personal Device" {...field} className="bg-background/50 border-white/10" />
+                              <Input placeholder="e.g. iPhone 15 Pro" {...field} className="bg-background/50 border-white/10" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -313,7 +317,7 @@ export default function UnblockPage() {
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
                                 <SelectTrigger className="bg-background/50 border-white/10">
-                                  <SelectValue placeholder="Provider" />
+                                  <SelectValue placeholder="Select Provider" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
@@ -335,7 +339,7 @@ export default function UnblockPage() {
                               <Tag className="w-4 h-4 text-primary" /> WiFi SSID
                             </FormLabel>
                             <FormControl>
-                              <Input placeholder="Network Name" {...field} className="bg-background/50 border-white/10" />
+                              <Input placeholder="e.g. JioFiber_Home" {...field} className="bg-background/50 border-white/10" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -407,14 +411,14 @@ export default function UnblockPage() {
             <Card className="glass-morphism border-white/10">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <Star className="w-5 h-5 text-primary" /> One Trial Policy
+                  <Star className="w-5 h-5 text-primary" /> Fair Use Policy
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-xs space-y-4 text-muted-foreground leading-relaxed">
-                <p>To maintain network integrity, each account is granted exactly one 1-hour free trial.</p>
+                <p>To ensure network availability for all users, duplicate MAC addresses are strictly monitored.</p>
                 <div className="flex gap-3 pt-2">
                    <AlertCircle className="w-5 h-5 text-orange-500 shrink-0" />
-                   <p className="italic">After your trial session concludes, you can upgrade to the Monthly Premium plan for continuous access.</p>
+                   <p className="italic">A MAC address already registered in an active session cannot be resubmitted until the existing session expires or is terminated.</p>
                 </div>
               </CardContent>
             </Card>
