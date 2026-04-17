@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useUser, useDoc, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
@@ -42,7 +43,7 @@ export default function AdminPage() {
   const { data: adminData, isLoading: isAdminLoading } = useDoc(adminRef);
   const hasAdminUid = !!adminData || (user?.uid === HARDCODED_ADMIN_UID);
 
-  // Queries
+  // Queries - Only active if simple auth is passed AND user has admin priority
   const inquiriesQuery = useMemoFirebase(() => {
     if (!user || !hasAdminUid || !isSimpleAuthenticated) return null;
     return query(collection(db, 'contactInquiries'), orderBy('submissionDate', 'desc'));
@@ -52,6 +53,7 @@ export default function AdminPage() {
 
   const allRequestsQuery = useMemoFirebase(() => {
     if (!user || !hasAdminUid || !isSimpleAuthenticated) return null;
+    // Collection Group queries require indexes and root priority permissions
     return query(collectionGroup(db, 'unblockRequests'), orderBy('requestDate', 'desc'));
   }, [db, user, hasAdminUid, isSimpleAuthenticated]);
 
