@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Shield, ArrowRight, CheckCircle2, Wifi, Tablet, Tag, CreditCard, Clock, Lock, Loader2, AlertCircle, LayoutDashboard, DatabaseZap } from 'lucide-react';
+import { Shield, ArrowRight, CheckCircle2, Wifi, Tablet, Tag, CreditCard, Clock, Lock, Loader2, AlertCircle, LayoutDashboard, DatabaseZap, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -15,9 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { doc, collection, query, where, getDocs, collectionGroup } from 'firebase/firestore';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
 
@@ -35,7 +35,14 @@ export default function UnblockPage() {
   const db = useFirestore();
   const [loading, setLoading] = useState(false);
 
-  // Check for existing requests for THIS user to enforce "one request per user" rule
+  // 1. Fetch user profile to check trial history
+  const userProfileRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(db, 'users', user.uid);
+  }, [user, db]);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc(userProfileRef);
+
+  // 2. Check for active requests to enforce one-at-a-time rule
   const requestsQuery = useMemoFirebase(() => {
     if (!user) return null;
     return collection(db, 'users', user.uid, 'unblockRequests');
@@ -44,6 +51,8 @@ export default function UnblockPage() {
   const { data: requestsData, isLoading: isRequestsLoading } = useCollection(requestsQuery);
   const hasExistingRequest = requestsData && requestsData.length > 0;
 
+  const hasUsedTrial = userProfile?.hasUsedTrial === true;
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -51,7 +60,7 @@ export default function UnblockPage() {
       deviceName: '',
       wifiProvider: 'Jio',
       ssid: '',
-      plan: 'trial',
+      plan: hasUsedTrial ? 'paid' : 'trial',
     },
   });
 
@@ -81,11 +90,19 @@ export default function UnblockPage() {
       return;
     }
 
+    if (values.plan === 'trial' && hasUsedTrial) {
+      toast({
+        variant: "destructive",
+        title: "Trial Already Used",
+        description: "Your account has already utilized its free trial. Please select the Premium Plan.",
+      });
+      return;
+    }
+
     setLoading(true);
 
-    // CRITICAL: Infrastructure & Policy Validation
     try {
-      // 1. Global Trial Prevention (One trial per HARDWARE device across all accounts)
+      // Global validation for MAC duplication
       if (values.plan === 'trial') {
         const globalTrialQuery = query(
           collectionGroup(db, 'unblockRequests'),
@@ -96,15 +113,14 @@ export default function UnblockPage() {
         if (!trialSnap.empty) {
           toast({
             variant: "destructive",
-            title: "Trial Already Claimed",
-            description: "This device hardware ID has already utilized a free trial period. Please use the Premium Plan.",
+            title: "Hardware Blocked",
+            description: "This device hardware has already utilized a trial. Please upgrade to Premium.",
           });
           setLoading(false);
           return;
         }
       }
 
-      // 2. Global Overload Protection (Prevents multiple users from requesting the same MAC simultaneously)
       const globalActiveQuery = query(
         collectionGroup(db, 'unblockRequests'),
         where('macAddress', '==', values.macAddress),
@@ -114,21 +130,19 @@ export default function UnblockPage() {
       if (!activeSnap.empty) {
         toast({
           variant: "destructive",
-          title: "Infrastructure Overload",
-          description: "This MAC address is already being processed in another active session. Duplicate tasks are blocked.",
+          title: "Session Conflict",
+          description: "This device is already being processed in another active session.",
         });
         setLoading(false);
         return;
       }
     } catch (error) {
-      // Fallback for missing indexes in prototype environment
-      console.warn("Global validation requires Firestore indexing for collectionGroup queries.", error);
+      console.warn("Global validation failed", error);
     }
     
     const requestId = `REQ_${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
     const requestRef = doc(db, 'users', user.uid, 'unblockRequests', requestId);
 
-    // Trial is exactly 1 hour, Paid is 30 days
     const trialDurationMs = 60 * 60 * 1000;
     const paidDurationMs = 30 * 24 * 60 * 60 * 1000;
 
@@ -137,6 +151,14 @@ export default function UnblockPage() {
       : new Date(Date.now() + paidDurationMs).toISOString();
 
     const initialStatus = values.plan === 'trial' ? 'Unblocked' : 'Pending';
+
+    // Mark trial as used if chosen
+    if (values.plan === 'trial') {
+      updateDocumentNonBlocking(doc(db, 'users', user.uid), {
+        hasUsedTrial: true,
+        updatedAt: new Date().toISOString()
+      });
+    }
 
     setDocumentNonBlocking(requestRef, {
       id: requestId,
@@ -158,18 +180,18 @@ export default function UnblockPage() {
       } else {
         toast({
           title: "Trial Activated!",
-          description: "Your 1-hour free trial has started. Redirecting to dashboard...",
+          description: "Redirecting to your dashboard.",
         });
         router.push('/dashboard');
       }
     }, 1500);
   }
 
-  if (isUserLoading || isRequestsLoading) {
+  if (isUserLoading || isRequestsLoading || isProfileLoading) {
     return (
       <div className="container mx-auto px-4 py-32 flex flex-col items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground animate-pulse">Checking infrastructure status...</p>
+        <p className="text-muted-foreground animate-pulse font-bold text-xs uppercase tracking-widest">Secure Handshake...</p>
       </div>
     );
   }
@@ -183,17 +205,12 @@ export default function UnblockPage() {
           </div>
           <div className="space-y-2">
             <h1 className="text-3xl font-bold font-headline">Authentication Required</h1>
-            <p className="text-muted-foreground">You must be logged in to submit an unblock request. This ensures your connection is securely managed.</p>
+            <p className="text-muted-foreground">Please log in to submit an unblock request.</p>
           </div>
           <div className="flex flex-col gap-3">
             <Link href="/login" className="w-full">
               <Button size="lg" className="w-full h-14 text-lg font-bold rounded-xl neon-glow">
-                Login to Continue
-              </Button>
-            </Link>
-            <Link href="/signup" className="w-full">
-              <Button variant="outline" size="lg" className="w-full h-14 text-lg font-bold rounded-xl border-white/10 bg-white/5">
-                Create an Account
+                Login
               </Button>
             </Link>
           </div>
@@ -210,8 +227,8 @@ export default function UnblockPage() {
             <CheckCircle2 className="w-10 h-10 text-primary" />
           </div>
           <div className="space-y-4">
-            <h1 className="text-4xl font-black font-headline tracking-tighter">Already <span className="text-primary">Submitted</span></h1>
-            <p className="text-muted-foreground text-lg">You have already submitted an unblocking request for your device. To ensure network stability, our infrastructure currently supports one active unblock task per account.</p>
+            <h1 className="text-4xl font-black font-headline tracking-tighter">Existing <span className="text-primary">Task</span></h1>
+            <p className="text-muted-foreground text-lg">You currently have an active unblock request. Our infrastructure supports one simultaneous session per user.</p>
           </div>
           <div className="pt-4">
             <Link href="/dashboard">
@@ -220,7 +237,6 @@ export default function UnblockPage() {
               </Button>
             </Link>
           </div>
-          <p className="text-xs text-muted-foreground">If you need to unblock another device, please contact support or wait for your current session to expire.</p>
         </Card>
       </div>
     );
@@ -231,7 +247,7 @@ export default function UnblockPage() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12 space-y-4">
           <h1 className="font-headline text-4xl md:text-5xl font-bold">Unblock Request</h1>
-          <p className="text-muted-foreground">Fill in the details below to initialize the unblocking process.</p>
+          <p className="text-muted-foreground">Submit your device details for network reinstatement.</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -260,7 +276,6 @@ export default function UnblockPage() {
                                 className="bg-background/50 border-white/10 font-mono" 
                               />
                             </FormControl>
-                            <FormDescription className="text-xs">Unique hardware ID of your device.</FormDescription>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -274,7 +289,7 @@ export default function UnblockPage() {
                               <Tablet className="w-4 h-4 text-primary" /> Device Name
                             </FormLabel>
                             <FormControl>
-                              <Input placeholder="iPhone 15 Pro" {...field} className="bg-background/50 border-white/10" />
+                              <Input placeholder="Personal Device" {...field} className="bg-background/50 border-white/10" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -289,18 +304,18 @@ export default function UnblockPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="flex items-center gap-2">
-                              <Wifi className="w-4 h-4 text-primary" /> WiFi Provider
+                              <Wifi className="w-4 h-4 text-primary" /> Provider
                             </FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
                                 <SelectTrigger className="bg-background/50 border-white/10">
-                                  <SelectValue placeholder="Select provider" />
+                                  <SelectValue placeholder="Provider" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
                                 <SelectItem value="Jio">Jio Fiber</SelectItem>
                                 <SelectItem value="Airtel">Airtel Xstream</SelectItem>
-                                <SelectItem value="BSNL">BSNL Bharat AirFiber</SelectItem>
+                                <SelectItem value="BSNL">BSNL Bharat Fiber</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -313,10 +328,10 @@ export default function UnblockPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="flex items-center gap-2">
-                              <Tag className="w-4 h-4 text-primary" /> WiFi Name (SSID)
+                              <Tag className="w-4 h-4 text-primary" /> WiFi SSID
                             </FormLabel>
                             <FormControl>
-                              <Input placeholder="My_Home_WiFi" {...field} className="bg-background/50 border-white/10" />
+                              <Input placeholder="Network Name" {...field} className="bg-background/50 border-white/10" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -330,7 +345,7 @@ export default function UnblockPage() {
                       render={({ field }) => (
                         <FormItem className="space-y-4">
                           <FormLabel className="flex items-center gap-2">
-                            <CreditCard className="w-4 h-4 text-primary" /> Select Plan
+                            <CreditCard className="w-4 h-4 text-primary" /> Selection Plan
                           </FormLabel>
                           <FormControl>
                             <RadioGroup
@@ -340,15 +355,18 @@ export default function UnblockPage() {
                             >
                               <FormItem>
                                 <FormControl>
-                                  <RadioGroupItem value="trial" className="sr-only" />
+                                  <RadioGroupItem value="trial" disabled={hasUsedTrial} className="sr-only" />
                                 </FormControl>
-                                <FormLabel className={`flex flex-col p-4 rounded-xl border cursor-pointer transition-all ${field.value === 'trial' ? 'border-primary bg-primary/10' : 'border-white/10 bg-white/5 hover:border-white/20'}`}>
+                                <FormLabel className={`relative flex flex-col p-4 rounded-xl border cursor-pointer transition-all ${hasUsedTrial ? 'opacity-50 grayscale cursor-not-allowed' : (field.value === 'trial' ? 'border-primary bg-primary/10' : 'border-white/10 bg-white/5 hover:border-white/20')}`}>
+                                  {hasUsedTrial && (
+                                    <div className="absolute top-2 right-2 text-[8px] font-bold text-muted-foreground uppercase">Used</div>
+                                  )}
                                   <div className="flex justify-between items-start mb-2">
-                                    <span className="font-bold text-lg">Free Trial</span>
-                                    {field.value === 'trial' && <CheckCircle2 className="w-5 h-5 text-primary" />}
+                                    <span className="font-bold text-sm">Free Trial</span>
+                                    {field.value === 'trial' && !hasUsedTrial && <CheckCircle2 className="w-4 h-4 text-primary" />}
                                   </div>
-                                  <span className="text-muted-foreground text-sm">1 hour access</span>
-                                  <span className="mt-4 font-headline font-bold text-xl">₹0</span>
+                                  <span className="text-muted-foreground text-[10px]">1 Hour Access</span>
+                                  <span className="mt-2 font-headline font-bold text-lg">₹0</span>
                                 </FormLabel>
                               </FormItem>
 
@@ -358,11 +376,11 @@ export default function UnblockPage() {
                                 </FormControl>
                                 <FormLabel className={`flex flex-col p-4 rounded-xl border cursor-pointer transition-all ${field.value === 'paid' ? 'border-primary bg-primary/10' : 'border-white/10 bg-white/5 hover:border-white/20'}`}>
                                   <div className="flex justify-between items-start mb-2">
-                                    <span className="font-bold text-lg">Premium Plan</span>
-                                    {field.value === 'paid' && <CheckCircle2 className="font-bold text-primary" />}
+                                    <span className="font-bold text-sm">Premium Plan</span>
+                                    {field.value === 'paid' && <CheckCircle2 className="w-4 h-4 text-primary" />}
                                   </div>
-                                  <span className="text-muted-foreground text-sm">30 days full access</span>
-                                  <span className="mt-4 font-headline font-bold text-xl">₹100</span>
+                                  <span className="text-muted-foreground text-[10px]">30 Days Access</span>
+                                  <span className="mt-2 font-headline font-bold text-lg">₹100</span>
                                 </FormLabel>
                               </FormItem>
                             </RadioGroup>
@@ -373,8 +391,7 @@ export default function UnblockPage() {
                     />
 
                     <Button type="submit" size="lg" className="w-full h-14 text-lg font-bold neon-glow rounded-xl" disabled={loading}>
-                      {loading ? "Initializing..." : (form.watch('plan') === 'trial' ? "Start Free Trial" : "Proceed to Payment")}
-                      {!loading && <ArrowRight className="ml-2 w-5 h-5" />}
+                      {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (form.watch('plan') === 'trial' ? "Initialize Trial" : "Proceed to Premium")}
                     </Button>
                   </form>
                 </Form>
@@ -386,17 +403,14 @@ export default function UnblockPage() {
             <Card className="glass-morphism border-white/10">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <DatabaseZap className="w-5 h-5 text-primary" /> Infrastructure
+                  <Star className="w-5 h-5 text-primary" /> One Trial Policy
                 </CardTitle>
               </CardHeader>
-              <CardContent className="text-sm space-y-4 text-muted-foreground">
-                <div className="flex gap-3">
-                  <Shield className="w-5 h-5 text-primary shrink-0" />
-                  <p>Our backend validates your hardware ID and verifies real-time status with regional network controllers.</p>
-                </div>
+              <CardContent className="text-xs space-y-4 text-muted-foreground leading-relaxed">
+                <p>To maintain network integrity, each account is granted exactly one 1-hour free trial.</p>
                 <div className="flex gap-3 pt-2">
                    <AlertCircle className="w-5 h-5 text-orange-500 shrink-0" />
-                   <p className="text-xs italic"><strong>Overload Protection:</strong> Only one free trial is permitted per hardware device (MAC) globally. Duplicate active sessions for the same MAC are automatically rejected.</p>
+                   <p className="italic">After your trial session concludes, you can upgrade to the Monthly Premium plan for continuous access.</p>
                 </div>
               </CardContent>
             </Card>
