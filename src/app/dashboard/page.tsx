@@ -68,7 +68,7 @@ export default function DashboardPage() {
       }
     }, 1000);
 
-    return () => interval(interval);
+    return () => clearInterval(interval);
   }, [requestData, effectiveStatus]);
 
   const handleRefreshConnection = () => {
