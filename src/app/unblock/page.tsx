@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -67,8 +66,8 @@ export default function UnblockPage() {
     },
   });
 
-  // Sync plan choice with trial eligibility
-  useMemo(() => {
+  // Sync plan choice with trial eligibility using useEffect to avoid render-phase state updates
+  useEffect(() => {
     if (!isProfileLoading && !hasUsedTrial) {
       form.setValue('plan', 'trial');
     } else {
