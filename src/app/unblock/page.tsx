@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -62,18 +63,20 @@ export default function UnblockPage() {
       deviceName: '',
       wifiProvider: 'Jio',
       ssid: '',
-      plan: 'paid', // Default to paid, trial becomes option if available
+      plan: 'paid',
     },
   });
 
-  // Sync plan choice with trial eligibility using useEffect to avoid render-phase state updates
+  // Sync plan choice with trial eligibility
   useEffect(() => {
-    if (!isProfileLoading && !hasUsedTrial) {
-      form.setValue('plan', 'trial');
-    } else {
-      form.setValue('plan', 'paid');
+    if (!isProfileLoading && userProfile) {
+      if (!userProfile.hasUsedTrial) {
+        form.setValue('plan', 'trial');
+      } else {
+        form.setValue('plan', 'paid');
+      }
     }
-  }, [hasUsedTrial, isProfileLoading, form]);
+  }, [userProfile, isProfileLoading, form]);
 
   const formatMacAddress = (value: string) => {
     const hexOnly = value.replace(/[^0-9A-Fa-f]/g, '').slice(0, 12);
@@ -106,16 +109,18 @@ export default function UnblockPage() {
     try {
       const macToCheck = values.macAddress.toUpperCase();
 
-      // 1. GLOBAL DUPLICATE MAC CHECK (Using Firestore collectionGroup)
+      // 1. GLOBAL DUPLICATE MAC CHECK (Simplified query to avoid index errors)
       const globalMacQuery = query(
         collectionGroup(db, 'unblockRequests'),
-        where('macAddress', '==', macToCheck),
-        where('status', 'in', ['Pending', 'Unblocked'])
+        where('macAddress', '==', macToCheck)
       );
       
       const macSnap = await getDocs(globalMacQuery);
       
-      if (!macSnap.empty) {
+      // Filter active sessions client-side to avoid complex composite indexes
+      const activeSessions = macSnap.docs.filter(d => ['Pending', 'Unblocked'].includes(d.data().status));
+      
+      if (activeSessions.length > 0) {
         toast({
           variant: "destructive",
           title: "Registration Error",
@@ -127,13 +132,10 @@ export default function UnblockPage() {
 
       // 2. GLOBAL TRIAL CHECK for the specific MAC address
       if (values.plan === 'trial') {
-        const globalTrialQuery = query(
-          collectionGroup(db, 'unblockRequests'),
-          where('macAddress', '==', macToCheck),
-          where('subscriptionId', '==', 'FREE_TRIAL')
-        );
-        const trialSnap = await getDocs(globalTrialQuery);
-        if (!trialSnap.empty) {
+        // Check if ANY document for this MAC used a trial
+        const hasHistoryOfTrial = macSnap.docs.some(d => d.data().subscriptionId === 'FREE_TRIAL');
+        
+        if (hasHistoryOfTrial) {
           toast({
             variant: "destructive",
             title: "Hardware Conflict",
@@ -143,7 +145,7 @@ export default function UnblockPage() {
           return;
         }
 
-        // Check if the current user has used a trial (safety fallback)
+        // Check if the current user profile has used a trial
         if (hasUsedTrial) {
           toast({
             variant: "destructive",
@@ -204,10 +206,11 @@ export default function UnblockPage() {
 
     } catch (error: any) {
       setLoading(false);
+      console.error("Hardware verification failure:", error);
       toast({
         variant: "destructive",
         title: "System Error",
-        description: "Could not verify hardware status. Please check your connection.",
+        description: "Could not verify hardware status. Please check your network connection.",
       });
     }
   }
@@ -331,7 +334,7 @@ export default function UnblockPage() {
                             <FormLabel className="flex items-center gap-2">
                               <Wifi className="w-4 h-4 text-primary" /> Provider
                             </FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
                               <FormControl>
                                 <SelectTrigger className="bg-background/50 border-white/10">
                                   <SelectValue placeholder="Select Provider" />
