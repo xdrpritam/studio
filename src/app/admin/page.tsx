@@ -53,7 +53,8 @@ export default function AdminPage() {
 
   const allRequestsQuery = useMemoFirebase(() => {
     if (!user || !hasAdminUid || !isSimpleAuthenticated) return null;
-    // Collection Group queries require indexes and root priority permissions
+    // Note: Collection Group queries require an index. If you see a permission error, 
+    // it may also be Firestore reporting a missing index as a permission issue.
     return query(collectionGroup(db, 'unblockRequests'), orderBy('requestDate', 'desc'));
   }, [db, user, hasAdminUid, isSimpleAuthenticated]);
 

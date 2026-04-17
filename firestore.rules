@@ -22,12 +22,12 @@ service cloud.firestore {
     // SYSTEM-WIDE ADMIN OVERRIDE
     // Grant administrators full read/write access to all collections and documents.
     // This is required for recursive searches and collection group queries in the dashboard.
+    // Explicitly matching the root for collection group 'list' operations.
     match /{document=**} {
       allow read, write: if isAdmin();
     }
 
     // USER-SPECIFIC RULES
-    // Allows users to manage their own profile and unblock requests.
     match /users/{userId} {
       allow read, write: if isOwner(userId);
       
@@ -47,17 +47,14 @@ service cloud.firestore {
     // PUBLIC/USER-ACCESSIBLE UTILITIES
     match /redeemCodes/{codeId} {
       allow get: if isSignedIn();
-      // Allow users to update code usage status during redemption
       allow update: if isSignedIn();
     }
 
     match /contactInquiries/{inquiryId} {
-      // Allow anyone to submit a contact form
       allow create: if true;
     }
 
     match /roles_admin/{uid} {
-      // Allow users to check their own admin status
       allow read: if isSignedIn();
     }
   }
