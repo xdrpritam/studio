@@ -9,8 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, Shield, Wifi, RefreshCcw, Smartphone, Zap, AlertTriangle, ArrowUpRight, Loader2, CheckCircle2, Search, Timer } from 'lucide-react';
 import { TroubleshootingAssistant } from '@/components/TroubleshootingAssistant';
 import { Progress } from '@/components/ui/progress';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, doc } from 'firebase/firestore';
+import { toast } from '@/hooks/use-toast';
 
 export default function DashboardPage() {
   const { user, isUserLoading } = useUser();
@@ -70,6 +71,37 @@ export default function DashboardPage() {
 
     return () => clearInterval(interval);
   }, [requestData, effectiveStatus]);
+
+  const handleTerminateSession = () => {
+    if (!requestData || !user) return;
+    
+    if (effectiveStatus === 'Pending') {
+      const now = new Date().getTime();
+      const requestTime = new Date(requestData.requestDate).getTime();
+      const thirtyMinutesMs = 30 * 60 * 1000;
+      
+      if ((now - requestTime) < thirtyMinutesMs) {
+        const remainingMs = thirtyMinutesMs - (now - requestTime);
+        const remainingMins = Math.ceil(remainingMs / (1000 * 60));
+        toast({
+          variant: "destructive",
+          title: "Terminate Blocked",
+          description: `Wait for admin approval. You can terminate after ${remainingMins} more minutes.`,
+        });
+        return;
+      }
+    }
+
+    if (!confirm("Terminate this network task? This will remove your device from the unblock queue.")) return;
+
+    const requestRef = doc(db, 'users', user.uid, 'unblockRequests', requestData.id);
+    deleteDocumentNonBlocking(requestRef);
+    
+    toast({
+      title: "Session Terminated",
+      description: "The request has been removed from the system infrastructure.",
+    });
+  };
 
   const formatTime = (ms: number) => {
     const hours = Math.floor(ms / (1000 * 60 * 60));
@@ -229,7 +261,11 @@ export default function DashboardPage() {
                   </Button>
                 </Link>
               )}
-              <Button variant="ghost" className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10 h-12 font-bold">
+              <Button 
+                variant="ghost" 
+                onClick={handleTerminateSession}
+                className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10 h-12 font-bold"
+              >
                 <AlertTriangle className="w-4 h-4" /> Terminate Session
               </Button>
             </CardContent>
