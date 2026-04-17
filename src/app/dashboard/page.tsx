@@ -72,6 +72,17 @@ export default function DashboardPage() {
     return () => clearInterval(interval);
   }, [requestData, effectiveStatus]);
 
+  const handleRefreshConnection = () => {
+    toast({
+      title: "Re-initializing...",
+      description: "Synchronizing with network infrastructure.",
+    });
+    // Full page reload ensures all Firebase listeners and timers are reset to most recent data
+    setTimeout(() => {
+      window.location.reload();
+    }, 800);
+  };
+
   const handleTerminateSession = () => {
     if (!requestData || !user) return;
     
@@ -251,7 +262,11 @@ export default function DashboardPage() {
               <CardTitle className="text-lg text-white">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button variant="outline" className="w-full justify-start gap-3 bg-white/5 border-white/10 h-12 text-white">
+              <Button 
+                variant="outline" 
+                onClick={handleRefreshConnection}
+                className="w-full justify-start gap-3 bg-white/5 border-white/10 h-12 text-white"
+              >
                 <RefreshCcw className="w-4 h-4 text-primary" /> Refresh Connection
               </Button>
               {requestData.subscriptionId === 'FREE_TRIAL' && (
